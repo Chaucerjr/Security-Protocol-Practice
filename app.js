@@ -117,7 +117,10 @@ function renderView() {
   else if (state.view === 'progress') app.innerHTML = renderProgress();
   else if (state.view === 'simulation') app.innerHTML = renderSimulation();
   else if (state.view === 'careers') app.innerHTML = renderCareers();
-  else if (state.view === 'leaderboard') app.innerHTML = renderLeaderboard();
+  else if (state.view === 'leaderboard') {
+    app.innerHTML = renderLeaderboard();
+    if (!getPlayerName()) promptPlayerName(() => renderView());
+  }
   else if (state.view === 'resources') app.innerHTML = renderResources();
   bindViewEvents();
 }
@@ -1058,10 +1061,5 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 
 // ---- INIT -------------------------------------------------------------------
 recalcTotal();
-if (!getPlayerName()) {
-  renderView();
-  promptPlayerName(null);
-} else {
-  updateLeaderboardEntry();
-  renderView();
-}
+updateLeaderboardEntry();
+renderView();
