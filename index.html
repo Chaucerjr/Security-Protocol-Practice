@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureOps Training Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">&#9632;</span>
+        <span class="logo-text">SecureOps</span>
+        <span class="logo-sub">Training Platform</span>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="scenarios">Scenarios</button>
+        <button class="nav-btn" data-view="progress">My Progress</button>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">
+        <span class="theme-icon" id="theme-icon">&#9788;</span>
+        <span class="theme-label" id="theme-label">Dark</span>
+      </button>
+      <div class="header-score">
+        <span class="score-label">Total Score</span>
+        <span class="score-value" id="total-score">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- Views injected by JS -->
+  </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modal-close">&times;</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="scenarios.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
