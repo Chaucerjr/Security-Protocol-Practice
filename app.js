@@ -11,12 +11,86 @@ const state = {
   totalScore: 0,
   completedScenarios: new Set(JSON.parse(localStorage.getItem('completed') || '[]')),
   scores: JSON.parse(localStorage.getItem('scores') || '{}'),
-  sim: null,  // active simulation state
+  sim: null,
 };
+
+// ---- PLAYER / LEADERBOARD ---------------------------------------------------
+const PLAYER_KEY  = 'playerName';
+const BOARD_KEY   = 'leaderboard';
+
+function getLeaderboard() {
+  return JSON.parse(localStorage.getItem(BOARD_KEY) || '[]');
+}
+
+function saveLeaderboard(board) {
+  localStorage.setItem(BOARD_KEY, JSON.stringify(board));
+}
+
+function getPlayerName() {
+  return localStorage.getItem(PLAYER_KEY) || null;
+}
+
+function setPlayerName(name) {
+  localStorage.setItem(PLAYER_KEY, name);
+}
+
+function updateLeaderboardEntry() {
+  const name = getPlayerName();
+  if (!name) return;
+  const board = getLeaderboard();
+  const idx = board.findIndex(e => e.name === name);
+  const entry = {
+    name,
+    totalScore: state.totalScore,
+    completed: state.completedScenarios.size,
+    lastActive: new Date().toLocaleDateString(),
+  };
+  if (idx >= 0) board[idx] = entry;
+  else board.push(entry);
+  saveLeaderboard(board);
+}
+
+function promptPlayerName(onDone) {
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-content').innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">&#127942;</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px">Enter Your Name</div>
+      <div style="color:var(--muted);font-size:14px;margin-bottom:20px">Your name will appear on the leaderboard when you complete scenarios.</div>
+      <input id="player-name-input" type="text" maxlength="24" placeholder="Your name..."
+        style="width:100%;padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);
+               background:var(--surface2);color:var(--text);font-size:15px;outline:none;margin-bottom:12px" />
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn-secondary" id="skip-name-btn">Skip</button>
+        <button class="btn-primary" id="save-name-btn">Save &amp; Continue</button>
+      </div>
+    </div>`;
+  overlay.classList.remove('hidden');
+
+  const input = document.getElementById('player-name-input');
+  input.focus();
+
+  document.getElementById('save-name-btn').onclick = () => {
+    const val = input.value.trim();
+    if (val.length < 1) { input.style.borderColor = 'var(--danger)'; return; }
+    setPlayerName(val);
+    updateLeaderboardEntry();
+    overlay.classList.add('hidden');
+    if (onDone) onDone();
+  };
+  document.getElementById('skip-name-btn').onclick = () => {
+    overlay.classList.add('hidden');
+    if (onDone) onDone();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('save-name-btn').click();
+  });
+}
 
 function saveState() {
   localStorage.setItem('completed', JSON.stringify([...state.completedScenarios]));
   localStorage.setItem('scores', JSON.stringify(state.scores));
+  updateLeaderboardEntry();
 }
 
 function recalcTotal() {
@@ -43,6 +117,7 @@ function renderView() {
   else if (state.view === 'progress') app.innerHTML = renderProgress();
   else if (state.view === 'simulation') app.innerHTML = renderSimulation();
   else if (state.view === 'careers') app.innerHTML = renderCareers();
+  else if (state.view === 'leaderboard') app.innerHTML = renderLeaderboard();
   bindViewEvents();
 }
 
@@ -462,6 +537,9 @@ function handleAction(e) {
   else if (action === 'open-role') {
     openRoleModal(e.currentTarget.dataset.roleId);
   }
+  else if (action === 'set-name' || action === 'change-name') {
+    promptPlayerName(() => renderView());
+  }
 }
 
 // ---- SIMULATION LOGIC -------------------------------------------------------
@@ -521,6 +599,78 @@ function advanceStep() {
     saveState();
     renderResults(scenario, finalScore, sim.correctCount, total);
   }
+}
+
+// ---- LEADERBOARD ------------------------------------------------------------
+function renderLeaderboard() {
+  const board = getLeaderboard().sort((a, b) => b.totalScore - a.totalScore);
+  const playerName = getPlayerName();
+  const total = ALL_SCENARIOS.length;
+
+  const medals = ['&#129351;', '&#129352;', '&#129353;'];
+
+  const rows = board.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Complete a scenario to appear here.</td></tr>`
+    : board.map((entry, i) => {
+        const isYou = entry.name === playerName;
+        const pct = total ? Math.round(entry.completed / total * 100) : 0;
+        return `
+        <tr class="${isYou ? 'leaderboard-you' : ''}">
+          <td class="lb-rank">${i < 3 ? medals[i] : '#' + (i + 1)}</td>
+          <td class="lb-name">${escHtml(entry.name)}${isYou ? ' <span class="lb-you-badge">You</span>' : ''}</td>
+          <td class="lb-score">${entry.totalScore.toLocaleString()}</td>
+          <td class="lb-completed">${entry.completed} / ${total} <span class="lb-pct">(${pct}%)</span></td>
+          <td class="lb-date">${entry.lastActive}</td>
+        </tr>`;
+      }).join('');
+
+  return `
+<div class="view">
+  <div class="lb-hero">
+    <div>
+      <div class="lb-hero-title">&#127942; Leaderboard</div>
+      <div class="lb-hero-sub">Top scores across all ${total} training scenarios. Complete scenarios to climb the ranks.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-shrink:0">
+      ${playerName
+        ? `<div style="font-size:13px;color:var(--muted);align-self:center">Playing as <strong style="color:var(--text)">${escHtml(playerName)}</strong></div>
+           <button class="btn-secondary" data-action="change-name">Change Name</button>`
+        : `<button class="btn-primary" data-action="set-name">Set Your Name</button>`}
+    </div>
+  </div>
+
+  ${playerName ? (() => {
+    const myEntry = board.find(e => e.name === playerName);
+    const myRank  = board.findIndex(e => e.name === playerName) + 1;
+    if (!myEntry) return '';
+    return `
+    <div class="lb-your-stats">
+      <div class="lb-stat"><div class="lb-stat-val">#${myRank}</div><div class="lb-stat-label">Your Rank</div></div>
+      <div class="lb-stat"><div class="lb-stat-val">${myEntry.totalScore.toLocaleString()}</div><div class="lb-stat-label">Your Score</div></div>
+      <div class="lb-stat"><div class="lb-stat-val">${myEntry.completed}</div><div class="lb-stat-label">Completed</div></div>
+      <div class="lb-stat"><div class="lb-stat-val">${board.length}</div><div class="lb-stat-label">Players</div></div>
+    </div>`;
+  })() : ''}
+
+  <div class="lb-table-wrap">
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th style="width:60px">Rank</th>
+          <th>Player</th>
+          <th>Total Score</th>
+          <th>Scenarios</th>
+          <th>Last Active</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:16px;font-size:12px;color:var(--muted);text-align:center">
+    Leaderboard is stored locally in this browser. Scores update automatically when you complete scenarios.
+  </div>
+</div>`;
 }
 
 // ---- CAREERS ----------------------------------------------------------------
@@ -679,4 +829,10 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 
 // ---- INIT -------------------------------------------------------------------
 recalcTotal();
-renderView();
+if (!getPlayerName()) {
+  renderView();
+  promptPlayerName(null);
+} else {
+  updateLeaderboardEntry();
+  renderView();
+}

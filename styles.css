@@ -572,6 +572,78 @@ body {
 }
 
 /* ============================================================
+   LEADERBOARD VIEW
+   ============================================================ */
+.lb-hero {
+  background: linear-gradient(135deg, var(--surface) 0%, #1a2332 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 40px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.lb-hero-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.lb-hero-sub { color: var(--muted); font-size: 14px; }
+
+.lb-your-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.lb-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+.lb-stat-val { font-size: 26px; font-weight: 700; color: var(--accent); }
+.lb-stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.lb-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.lb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.lb-table th {
+  background: var(--surface2);
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.lb-table td { padding: 12px 16px; border-bottom: 1px solid rgba(48,54,61,.5); }
+.lb-table tr:last-child td { border-bottom: none; }
+.lb-table tr:hover td { background: rgba(255,255,255,.03); }
+.leaderboard-you td { background: rgba(88,166,255,.05); }
+.leaderboard-you:hover td { background: rgba(88,166,255,.09); }
+
+.lb-rank { font-size: 18px; text-align: center; }
+.lb-name { font-weight: 600; }
+.lb-score { font-weight: 700; color: var(--accent2); }
+.lb-completed { color: var(--text); }
+.lb-pct { color: var(--muted); font-size: 12px; }
+.lb-date { color: var(--muted); font-size: 13px; }
+.lb-you-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  background: rgba(88,166,255,.15); color: var(--accent);
+  font-weight: 600; border: 1px solid var(--accent);
+  vertical-align: middle; margin-left: 4px;
+}
+
+@media (max-width: 600px) { .lb-your-stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ============================================================
    CAREERS VIEW
    ============================================================ */
 .careers-hero {
