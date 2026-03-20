@@ -647,7 +647,7 @@ body {
    CAREERS VIEW
    ============================================================ */
 .careers-hero {
-  background: linear-gradient(135deg, var(--surface) 0%, #1a2332 100%);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 36px 48px;
