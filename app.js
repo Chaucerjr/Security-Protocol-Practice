@@ -118,6 +118,7 @@ function renderView() {
   else if (state.view === 'simulation') app.innerHTML = renderSimulation();
   else if (state.view === 'careers') app.innerHTML = renderCareers();
   else if (state.view === 'leaderboard') app.innerHTML = renderLeaderboard();
+  else if (state.view === 'resources') app.innerHTML = renderResources();
   bindViewEvents();
 }
 
@@ -213,6 +214,99 @@ function renderScenariosList() {
 </div>`;
 }
 
+// ---- CAREER FIT ANALYSIS ----------------------------------------------------
+function renderCareerFit() {
+  // Map each training category to career fields and weight their relevance
+  const fields = [
+    {
+      name: 'SOC / Blue Team',
+      color: '#58a6ff',
+      weights: { phishing: 0.25, incident: 0.35, network: 0.25, dataclass: 0.15, password: 0, social: 0 },
+      topRole: 'SOC Analyst or Incident Responder',
+      tip: 'Your strongest area is threat detection and response. Consider CompTIA CySA+ or BTL1 as your next certification.',
+    },
+    {
+      name: 'Penetration Testing',
+      color: '#f85149',
+      weights: { phishing: 0.1, incident: 0.1, network: 0.35, social: 0.25, password: 0.2, dataclass: 0 },
+      topRole: 'Penetration Tester or Red Team Operator',
+      tip: 'You show strength in offensive-adjacent skills. Start with TryHackMe Jr Pentester path and aim for eJPT or PNPT.',
+    },
+    {
+      name: 'Security Engineering',
+      color: '#3fb950',
+      weights: { phishing: 0.1, incident: 0.2, network: 0.3, password: 0.25, dataclass: 0.15, social: 0 },
+      topRole: 'Security Engineer or Cloud Security Engineer',
+      tip: 'Your technical breadth suits engineering roles. Focus on cloud platforms (AWS/Azure) and infrastructure security.',
+    },
+    {
+      name: 'GRC / Governance',
+      color: '#a78bfa',
+      weights: { phishing: 0.1, incident: 0.15, network: 0.05, password: 0.1, dataclass: 0.45, social: 0.15 },
+      topRole: 'GRC Analyst or Compliance Specialist',
+      tip: 'Your data classification and policy awareness point toward GRC. Look into CISM or ISC2 CC as starting points.',
+    },
+    {
+      name: 'Threat Intelligence',
+      color: '#d29922',
+      weights: { phishing: 0.3, incident: 0.25, network: 0.2, social: 0.2, password: 0.05, dataclass: 0 },
+      topRole: 'Threat Intelligence Analyst',
+      tip: 'Strong phishing and social engineering awareness suits threat intel work. Study MITRE ATT&CK and malware analysis basics.',
+    },
+  ];
+
+  // Calculate max possible score per category
+  const catMaxScores = {};
+  CATEGORIES.forEach(cat => {
+    const catScenarios = ALL_SCENARIOS.filter(s => s.category === cat.id);
+    catMaxScores[cat.id] = catScenarios.reduce((sum, s) => sum + s.steps.reduce((a, step) => a + step.points, 0), 0);
+  });
+
+  // Calculate actual score ratio per category
+  const catRatios = {};
+  CATEGORIES.forEach(cat => {
+    const catScenarios = ALL_SCENARIOS.filter(s => s.category === cat.id);
+    const earned = catScenarios.reduce((sum, s) => sum + (state.scores[s.id] || 0), 0);
+    catRatios[cat.id] = catMaxScores[cat.id] > 0 ? earned / catMaxScores[cat.id] : 0;
+  });
+
+  // Score each field
+  const fieldScores = fields.map(f => {
+    const score = Object.entries(f.weights).reduce((sum, [catId, weight]) => {
+      return sum + (catRatios[catId] || 0) * weight;
+    }, 0);
+    return { ...f, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const hasData = state.completedScenarios.size > 0;
+  const topField = fieldScores[0];
+
+  return `
+<div class="section-title" style="margin-top:40px">Career Fit Analysis</div>
+<div class="career-fit-panel">
+  <div class="career-fit-title">Best-Fit Security Fields Based on Your Scores</div>
+  <div class="career-fit-sub">Calculated from your performance across all training modules. Complete more scenarios for a more accurate analysis.</div>
+  ${!hasData
+    ? `<div style="color:var(--muted);font-size:13px">Complete at least one scenario to see your career fit analysis.</div>`
+    : `<div class="fit-bars">
+        ${fieldScores.map(f => {
+          const pct = Math.round(f.score * 100);
+          return `
+          <div class="fit-bar-row">
+            <div class="fit-bar-label">${f.name}</div>
+            <div class="fit-bar-track"><div class="fit-bar-fill" style="width:${pct}%;background:${f.color}"></div></div>
+            <div class="fit-bar-pct">${pct}%</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="fit-top-role">
+        <strong>Top match: ${topField.name}</strong> &mdash; Suggested role: ${topField.topRole}<br>
+        ${topField.tip}
+      </div>`
+  }
+</div>`;
+}
+
 // ---- PROGRESS ---------------------------------------------------------------
 function renderProgress() {
   const achievements = [
@@ -261,6 +355,8 @@ function renderProgress() {
       </div>
     `).join('')}
   </div>
+
+  ${renderCareerFit()}
 
   <div class="section-title" style="margin-top:40px">Score Summary</div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:500px">
@@ -495,6 +591,12 @@ function bindViewEvents() {
       renderView();
     });
   });
+  document.querySelectorAll('[data-res-tab]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.resourceTab = el.dataset.resTab;
+      renderView();
+    });
+  });
 }
 
 function handleAction(e) {
@@ -536,6 +638,9 @@ function handleAction(e) {
   }
   else if (action === 'open-role') {
     openRoleModal(e.currentTarget.dataset.roleId);
+  }
+  else if (action === 'open-cert') {
+    openCertModal(e.currentTarget.dataset.certId);
   }
   else if (action === 'set-name' || action === 'change-name') {
     promptPlayerName(() => renderView());
@@ -599,6 +704,130 @@ function advanceStep() {
     saveState();
     renderResults(scenario, finalScore, sim.correctCount, total);
   }
+}
+
+// ---- RESOURCES --------------------------------------------------------------
+function renderResources() {
+  const tab = state.resourceTab || 'study';
+
+  return `
+<div class="view">
+  <div class="resources-hero">
+    <div class="resources-hero-title">&#128218; Resources</div>
+    <div class="resources-hero-sub">Curated study materials, practice platforms, and certification guides to accelerate your security career.</div>
+  </div>
+
+  <div class="res-tabs">
+    <button class="res-tab ${tab === 'study' ? 'active' : ''}" data-res-tab="study">&#127891; Study Materials</button>
+    <button class="res-tab ${tab === 'certs' ? 'active' : ''}" data-res-tab="certs">&#127942; Certifications</button>
+  </div>
+
+  ${tab === 'study' ? renderStudyMaterials() : renderCerts()}
+</div>`;
+}
+
+function renderStudyMaterials() {
+  return STUDY_MATERIALS.map(section => `
+    <div class="res-section">
+      <div class="section-title"><span style="margin-right:4px">${section.icon}</span>${section.category}</div>
+      <div class="res-cards-grid">
+        ${section.items.map(item => `
+          <div class="res-card ${item.recommended ? 'res-card-featured' : ''}">
+            ${item.recommended ? '<div class="res-featured-badge">Recommended</div>' : ''}
+            <div class="res-card-title">${escHtml(item.name)}</div>
+            ${item.url ? `<div class="res-card-url">${escHtml(item.url)}</div>` : ''}
+            <div class="res-card-desc">${escHtml(item.desc)}</div>
+            <div class="res-card-tags">${item.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCerts() {
+  const levelOrder = ['entry', 'mid', 'senior'];
+  const levelLabel = { entry: 'Entry Level', mid: 'Mid Level', senior: 'Senior / Advanced' };
+
+  return levelOrder.map(lvl => {
+    const certs = CERTIFICATIONS.filter(c => c.level === lvl);
+    if (!certs.length) return '';
+    return `
+    <div class="res-section">
+      <div class="section-title">${levelLabel[lvl]}</div>
+      <div class="certs-grid">
+        ${certs.map(cert => `
+          <div class="cert-card" style="--cert-color:${cert.color}" data-action="open-cert" data-cert-id="${cert.id}">
+            <div class="cert-card-header">
+              <div class="cert-card-icon">${cert.icon}</div>
+              <div>
+                <div class="cert-card-name">${escHtml(cert.name)}</div>
+                <div class="cert-card-issuer">${escHtml(cert.issuer)}</div>
+              </div>
+            </div>
+            <div class="cert-card-summary">${escHtml(cert.summary.substring(0, 120))}...</div>
+            <div class="cert-card-meta">
+              <span class="cert-cost">${escHtml(cert.cost)}</span>
+              <span class="cert-track-badge">${escHtml(cert.track)}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openCertModal(certId) {
+  const cert = CERTIFICATIONS.find(c => c.id === certId);
+  if (!cert) return;
+
+  document.getElementById('modal-content').innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+      <div style="font-size:32px;flex-shrink:0">${cert.icon}</div>
+      <div>
+        <div style="font-size:20px;font-weight:700">${escHtml(cert.name)}</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:2px">${escHtml(cert.issuer)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <span class="role-level-badge level-${cert.level}">${cert.level}</span>
+          <span class="cert-track-badge">${cert.track}</span>
+          <span style="font-size:12px;color:var(--accent2);font-weight:600">${escHtml(cert.cost)}</span>
+          <span style="font-size:12px;color:var(--muted)">${escHtml(cert.duration)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="role-modal-body">
+      <div>
+        <div class="modal-section-title">Overview</div>
+        <div class="modal-overview">${escHtml(cert.summary)}</div>
+      </div>
+      <div>
+        <div class="modal-section-title">Domains Covered</div>
+        <ul class="skill-list">${cert.domains.map(d => `<li>${escHtml(d)}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <div class="modal-section-title">Prerequisites</div>
+        <div class="entry-path-text">${escHtml(cert.prerequisites)}</div>
+      </div>
+      <div>
+        <div class="modal-section-title">Who Should Get This</div>
+        <div class="entry-path-text">${escHtml(cert.whoShouldGet)}</div>
+      </div>
+      <div>
+        <div class="modal-section-title">Study Resources</div>
+        <ul class="skill-list">${cert.studyResources.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <div class="modal-section-title">Renewal</div>
+        <div class="entry-path-text">${escHtml(cert.renewal)}</div>
+      </div>
+      ${cert.jobTitles ? `
+      <div>
+        <div class="modal-section-title">Related Job Titles</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${cert.jobTitles.map(j => `<span class="career-path-chip">${escHtml(j)}</span>`).join('')}</div>
+      </div>` : ''}
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 // ---- LEADERBOARD ------------------------------------------------------------
