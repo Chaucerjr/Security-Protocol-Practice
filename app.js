@@ -138,14 +138,18 @@ function renderScenariosList() {
 // ---- PROGRESS ---------------------------------------------------------------
 function renderProgress() {
   const achievements = [
-    { name: 'First Steps',       icon: '&#127937;', desc: 'Complete your first scenario',        earned: state.completedScenarios.size >= 1 },
-    { name: 'Phish Spotter',     icon: '&#128526;', desc: 'Complete all phishing scenarios',     earned: PHISHING_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
-    { name: 'First Responder',   icon: '&#128680;', desc: 'Complete all IR scenarios',           earned: INCIDENT_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
-    { name: 'Social Shield',     icon: '&#129309;', desc: 'Complete all social eng. scenarios',  earned: SOCIAL_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
-    { name: 'Packet Inspector',  icon: '&#128270;', desc: 'Complete all network scenarios',      earned: NETWORK_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
-    { name: 'Data Guardian',     icon: '&#128196;', desc: 'Complete all data class. scenarios',  earned: DATACLASS_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
-    { name: 'Century',           icon: '&#127881;', desc: 'Earn 100 points',                     earned: state.totalScore >= 100 },
-    { name: 'Security Pro',      icon: '&#9889;',   desc: 'Complete all scenarios',              earned: state.completedScenarios.size >= ALL_SCENARIOS.length },
+    { name: 'First Steps',       icon: '&#127937;', desc: 'Complete your first scenario',              earned: state.completedScenarios.size >= 1 },
+    { name: 'Phish Spotter',     icon: '&#128231;', desc: 'Complete all 10 phishing scenarios',        earned: PHISHING_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'First Responder',   icon: '&#128680;', desc: 'Complete all 8 incident response scenarios', earned: INCIDENT_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'Key Master',        icon: '&#128273;', desc: 'Complete all 8 password scenarios',         earned: PASSWORD_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'Social Shield',     icon: '&#129309;', desc: 'Complete all 8 social eng. scenarios',      earned: SOCIAL_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'Packet Inspector',  icon: '&#128270;', desc: 'Complete all 8 network scenarios',          earned: NETWORK_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'Data Guardian',     icon: '&#128196;', desc: 'Complete all 8 data class. scenarios',      earned: DATACLASS_SCENARIOS.every(s => state.completedScenarios.has(s.id)) },
+    { name: 'Century',           icon: '&#127881;', desc: 'Earn 500 points',                           earned: state.totalScore >= 500 },
+    { name: 'Halfway There',     icon: '&#9889;',   desc: 'Complete 25 scenarios',                     earned: state.completedScenarios.size >= 25 },
+    { name: 'Security Pro',      icon: '&#127942;', desc: 'Complete all 50 scenarios',                 earned: state.completedScenarios.size >= ALL_SCENARIOS.length },
+    { name: 'Top Scorer',        icon: '&#128200;', desc: 'Earn 1,000 points',                         earned: state.totalScore >= 1000 },
+    { name: 'Dedicated',         icon: '&#128293;', desc: 'Earn 2,000 points',                         earned: state.totalScore >= 2000 },
   ];
 
   return `
