@@ -6,6 +6,8 @@
 const state = {
   view: 'dashboard',
   filter: 'all',
+  careerTrack: 'all',
+  careerLevel: 'all',
   totalScore: 0,
   completedScenarios: new Set(JSON.parse(localStorage.getItem('completed') || '[]')),
   scores: JSON.parse(localStorage.getItem('scores') || '{}'),
@@ -40,6 +42,7 @@ function renderView() {
   else if (state.view === 'scenarios') app.innerHTML = renderScenariosList();
   else if (state.view === 'progress') app.innerHTML = renderProgress();
   else if (state.view === 'simulation') app.innerHTML = renderSimulation();
+  else if (state.view === 'careers') app.innerHTML = renderCareers();
   bindViewEvents();
 }
 
@@ -405,6 +408,18 @@ function bindViewEvents() {
       renderView();
     });
   });
+  document.querySelectorAll('[data-career-track]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.careerTrack = el.dataset.careerTrack;
+      renderView();
+    });
+  });
+  document.querySelectorAll('[data-career-level]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.careerLevel = el.dataset.careerLevel;
+      renderView();
+    });
+  });
 }
 
 function handleAction(e) {
@@ -443,6 +458,9 @@ function handleAction(e) {
   else if (action === 'go-scenarios') {
     state.sim = null;
     navigate('scenarios');
+  }
+  else if (action === 'open-role') {
+    openRoleModal(e.currentTarget.dataset.roleId);
   }
 }
 
@@ -503,6 +521,127 @@ function advanceStep() {
     saveState();
     renderResults(scenario, finalScore, sim.correctCount, total);
   }
+}
+
+// ---- CAREERS ----------------------------------------------------------------
+function renderCareers() {
+  const trackFilters = ['all', 'defensive', 'offensive', 'engineering', 'governance'];
+  const levelFilters = ['all', 'entry', 'mid', 'senior', 'executive', 'any'];
+  const track = state.careerTrack || 'all';
+  const level = state.careerLevel || 'all';
+
+  const filtered = CAREER_ROLES.filter(r =>
+    (track === 'all' || r.track === track) &&
+    (level === 'all' || r.level === level)
+  );
+
+  return `
+<div class="view">
+  <div class="careers-hero">
+    <div class="careers-hero-title">Security Career Paths</div>
+    <div class="careers-hero-sub">Explore roles in cybersecurity — from entry-level analysts to CISOs. Each card details the skills, certifications, and career paths for every position.</div>
+  </div>
+
+  <div class="careers-filters">
+    <span style="font-size:12px;color:var(--muted);align-self:center;margin-right:4px">Track:</span>
+    ${trackFilters.map(t => `<button class="filter-btn ${track === t ? 'active' : ''}" data-career-track="${t}">${t === 'all' ? 'All Tracks' : t.charAt(0).toUpperCase() + t.slice(1)}</button>`).join('')}
+    <span style="font-size:12px;color:var(--muted);align-self:center;margin-left:8px;margin-right:4px">Level:</span>
+    ${levelFilters.map(l => `<button class="filter-btn ${level === l ? 'active' : ''}" data-career-level="${l}">${l === 'all' ? 'All Levels' : l.charAt(0).toUpperCase() + l.slice(1)}</button>`).join('')}
+  </div>
+
+  <div class="roles-grid">
+    ${filtered.map(role => `
+      <div class="role-card" style="--role-color:${role.color}" data-action="open-role" data-role-id="${role.id}">
+        <div class="role-card-header">
+          <div class="role-icon">${role.icon}</div>
+          <div>
+            <div class="role-title">${role.title}</div>
+            <div class="role-subtitle">${role.subtitle}</div>
+          </div>
+        </div>
+        <div class="role-desc">${role.desc}</div>
+        <div class="role-meta">
+          <span class="role-salary">${role.salary}</span>
+          <div style="display:flex;gap:6px">
+            <span class="role-level-badge level-${role.level}">${role.level}</span>
+            <span class="track-badge">${role.track}</span>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+  </div>
+</div>`;
+}
+
+function openRoleModal(roleId) {
+  const role = CAREER_ROLES.find(r => r.id === roleId);
+  if (!role) return;
+
+  const fromChips = (role.careerPath.from || []).map(f => `<span class="career-path-chip">${f}</span>`).join('<span class="career-path-arrow">›</span>');
+  const toChips = (role.careerPath.to || []).map(t => `<span class="career-path-chip">${t}</span>`).join('');
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="role-modal-header">
+      <div class="role-modal-icon">${role.icon}</div>
+      <div>
+        <div class="role-modal-title">${role.title}</div>
+        <div class="role-modal-sub">${role.subtitle}</div>
+        <div class="role-modal-badges">
+          <span class="role-level-badge level-${role.level}">${role.level}</span>
+          <span class="track-badge">${role.track}</span>
+          <span style="font-size:12px;color:var(--accent2);font-weight:600">${role.salary}</span>
+          <span style="font-size:12px;color:var(--muted)">${role.experience}</span>
+        </div>
+      </div>
+    </div>
+    <div class="role-modal-body">
+      <div>
+        <div class="modal-section-title">Overview</div>
+        <div class="modal-overview">${role.overview}</div>
+      </div>
+      <div>
+        <div class="modal-section-title">Skills Required</div>
+        <div class="skills-columns">
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Technical</div>
+            <ul class="skill-list">${role.technicalSkills.map(s => `<li>${s}</li>`).join('')}</ul>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Soft Skills</div>
+            <ul class="skill-list">${role.softSkills.map(s => `<li>${s}</li>`).join('')}</ul>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-title">Certifications</div>
+        <div class="cert-list">
+          ${role.certifications.map(c => `
+            <div class="cert-item">
+              <span class="cert-name">${c.name}</span>
+              <span class="cert-priority prio-${c.priority}">${c.priority}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-title">Career Path</div>
+        <div class="career-path-row">
+          ${fromChips ? fromChips + '<span class="career-path-arrow">›</span>' : ''}
+          <span class="career-path-current">${role.title}</span>
+          ${toChips ? '<span class="career-path-arrow">›</span>' + toChips : ''}
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-title">How to Enter This Field</div>
+        <div class="entry-path-text">${role.entryPath}</div>
+      </div>
+      <div>
+        <div class="modal-section-title">A Day in the Life</div>
+        <div class="day-in-life">${role.dayInLife}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 // ---- MODAL ------------------------------------------------------------------
