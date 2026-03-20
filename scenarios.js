@@ -286,6 +286,254 @@ Microsoft Security Team
       },
     ],
   },
+  {
+    id: 'ph-06',
+    category: 'phishing',
+    title: 'OAuth Consent Phishing',
+    desc: 'A malicious app requests broad OAuth permissions to your Microsoft account.',
+    tags: ['OAuth', 'consent-phishing', 'cloud'],
+    steps: [
+      {
+        type: 'email',
+        label: 'You receive this email with an "Authorize App" button',
+        email: {
+          from: 'noreply@docusign-integrations.net',
+          to: 'you@company.com',
+          subject: 'Action Required: Authorize DocuSign Calendar Sync',
+          date: 'Thu, 19 Mar 2026 11:14:22 -0400',
+          body: `Hi,
+
+To complete your DocuSign integration, please authorize the calendar sync application using your Microsoft 365 account.
+
+Click below to grant access:
+
+  https://login.microsoftonline.com/oauth2/authorize?client_id=a7f3...
+
+This app requires the following permissions:
+  - Mail.Read
+  - Mail.Send
+  - Files.ReadWrite.All
+  - Contacts.ReadWrite
+
+This is a one-time authorization.
+
+DocuSign Integration Team
+`,
+        },
+        question: 'What is the most critical red flag in this OAuth consent request?',
+        choices: [
+          { text: 'The email came from a third-party domain, not docusign.com.', correct: false },
+          { text: 'The app requests Mail.Read, Mail.Send, and Files.ReadWrite.All — far beyond what a calendar sync needs.', correct: true },
+          { text: 'OAuth authorization emails are always phishing.', correct: false },
+          { text: 'The link goes to microsoftonline.com, which is suspicious.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. OAuth consent phishing exploits the fact that once you click "Accept", the attacker\'s app gets persistent access to your account — no password needed. The permission scope is the biggest red flag: a calendar sync has no legitimate need for Mail.Send or Files.ReadWrite.All. Attackers request broad scopes to read email, send on your behalf, and access all your files. Always scrutinize every permission before approving, and reject any app requesting more than needed.',
+          incorrect: 'The critical red flag is the excessive permission scope. Mail.Send + Files.ReadWrite.All grants the attacker full access to your inbox and files indefinitely, without needing your password again. The domain is also suspicious, but even if it were a real domain, the permissions alone should block approval. OAuth consent phishing is particularly dangerous because it bypasses MFA entirely.',
+        },
+        points: 20,
+        objectives: ['Identify OAuth consent phishing', 'Evaluate permission scope appropriateness', 'Understand why OAuth attacks bypass MFA'],
+        hint: 'What does a calendar sync app actually need access to? Compare that to what is being requested.',
+      },
+      {
+        type: 'analysis',
+        label: 'Post-authorization response',
+        stageContent: 'A colleague clicked the button and authorized the app 20 minutes ago. IT has been notified. The app has had access to their Microsoft 365 account since then.',
+        question: 'What is the correct immediate remediation?',
+        choices: [
+          { text: 'Ask the colleague to change their password.', correct: false },
+          { text: 'Revoke the malicious app\'s OAuth tokens in Azure AD, audit mail/files accessed, and check for forwarding rules or sent items.', correct: true },
+          { text: 'Have the colleague log out of all sessions and log back in.', correct: false },
+          { text: 'Run antivirus on the colleague\'s machine.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Password change does not revoke OAuth tokens — the app\'s access persists until explicitly revoked in Azure AD (Enterprise Applications → revoke permissions). After revoking: audit mail sent on the user\'s behalf, check for new inbox rules (forwarding rules are commonly set to persist access), review files accessed/shared, and look for further account compromise. This is why OAuth attacks are so dangerous — they survive password resets.',
+          incorrect: 'Changing the password does NOT revoke OAuth tokens. The malicious app retains access until its token is explicitly revoked in Azure AD. Go to Azure AD → Enterprise Applications → find the app → revoke permissions. Then audit what was accessed: sent emails, inbox forwarding rules, shared files.',
+        },
+        points: 20,
+        hint: 'OAuth tokens are independent of passwords. Where do you revoke them?',
+      },
+    ],
+  },
+  {
+    id: 'ph-07',
+    category: 'phishing',
+    title: 'Supplier Invoice Fraud',
+    desc: 'A vendor appears to have changed their banking details via email.',
+    tags: ['invoice-fraud', 'BEC', 'payment-diversion'],
+    steps: [
+      {
+        type: 'email',
+        label: 'Email from a long-standing supplier',
+        email: {
+          from: 'billing@acme-supplies.co',
+          to: 'ap@company.com',
+          subject: 'Important: Updated Banking Details for Future Payments',
+          date: 'Mon, 17 Mar 2026 14:30:05 -0500',
+          body: `Dear Accounts Payable Team,
+
+Please be advised that ACME Supplies has changed our banking details effective immediately. All future payments must be directed to our new account.
+
+New bank details:
+  Bank Name:    Chase Business Banking
+  Account Name: ACME Supplies LLC
+  Account No:   7823-XXXX-XXXX
+  Routing No:   021000021
+  Reference:    Supplier #AC-4821
+
+Please update your records and confirm receipt of this email. Our previous account will be closed at the end of this month.
+
+Thank you for your continued business.
+
+ACME Supplies Billing Team
+`,
+        },
+        question: 'What is the single most important process control that prevents payment diversion fraud?',
+        choices: [
+          { text: 'Verify the email came from the correct domain before updating records.', correct: false },
+          { text: 'Call the supplier on a known phone number from your internal records to verbally confirm the change.', correct: true },
+          { text: 'Reply to the email asking the supplier to confirm.', correct: false },
+          { text: 'Check that the account name matches the supplier name.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Any request to change payment details must be verified by calling the supplier on a phone number from YOUR records — not from the email, not from a number they provide in the email. Attackers set up call forwarding on spoofed numbers. Domain checks and reply confirmation are both bypassable by the attacker who controls the email thread. A direct verbal confirmation to a known contact is the only reliable control against payment diversion fraud.',
+          incorrect: 'Domain verification and reply confirmation are both insufficient — attackers can spoof domains and intercept email replies. Account name matching is trivially faked. The only reliable control: call the supplier\'s known phone number from your internal vendor records and speak to a known contact. This attack has cost organizations billions globally. Most major banks now recommend this as mandatory procedure for any payment detail change.',
+        },
+        points: 20,
+        objectives: ['Recognize payment diversion / mandate fraud', 'Apply out-of-band verification for financial changes', 'Understand why email confirmation is insufficient'],
+        hint: 'The attacker controls the email thread. What communication channel can they NOT control?',
+      },
+    ],
+  },
+  {
+    id: 'ph-08',
+    category: 'phishing',
+    title: 'Smishing — SMS Phishing',
+    desc: 'A text message claims your delivery requires immediate action.',
+    tags: ['smishing', 'SMS', 'mobile'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'You receive this text message on your personal phone',
+        stageContent: '<div style="background:#1a2332;border:1px solid #30363d;border-radius:12px;padding:20px;font-family:monospace;font-size:14px;max-width:360px;margin:0 auto">' +
+          '<div style="color:#8b949e;font-size:11px;margin-bottom:8px">FedEx Delivery — Today 09:41 AM</div>' +
+          '<div style="color:#e6edf3;line-height:1.7">Your package #FX-29483 is held at customs. A $3.49 clearance fee is required within 24hrs to avoid return.<br><br>' +
+          '<span style="color:#4db8ff">http://fedex-customs-pay.com/FX29483</span></div></div>',
+        question: 'Which of these is the strongest indicator that this is a smishing attack?',
+        choices: [
+          { text: 'FedEx never sends text messages about deliveries.', correct: false },
+          { text: 'The link domain is "fedex-customs-pay.com" — not fedex.com — and real carriers do not collect fees via SMS links.', correct: true },
+          { text: 'The fee amount of $3.49 is too small to be a real customs charge.', correct: false },
+          { text: 'SMS messages cannot contain real tracking numbers.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Two clear indicators: (1) the domain "fedex-customs-pay.com" is not fedex.com — it\'s a lookalike domain designed to deceive, and (2) legitimate carriers do not collect customs fees via SMS payment links. FedEx, UPS, and USPS direct customers to their official apps or websites, never to external payment URLs. The $3.49 amount is deliberately small to reduce friction and make clicking feel low-risk — this is intentional attacker psychology.',
+          incorrect: 'FedEx does send legitimate delivery SMS notifications. The red flags here are: (1) the link goes to "fedex-customs-pay.com", not fedex.com, (2) real carriers never collect fees via SMS payment links — customs fees go through official channels. If you have a real package, go directly to fedex.com and use your tracking number there.',
+        },
+        points: 15,
+        objectives: ['Identify smishing attack patterns', 'Verify URLs in SMS before clicking', 'Understand low-friction payment bait tactics'],
+        hint: 'Ignore the branding and urgency. Focus only on the link domain — what company actually owns "fedex-customs-pay.com"?',
+      },
+      {
+        type: 'analysis',
+        label: 'Safe response procedure',
+        stageContent: 'You receive the smishing message and believe you may actually have a package in transit.',
+        question: 'What is the safe way to check if the delivery issue is real?',
+        choices: [
+          { text: 'Click the link but only enter your email, not your credit card.', correct: false },
+          { text: 'Reply STOP to the SMS to opt out.', correct: false },
+          { text: 'Go directly to fedex.com by typing it into your browser and track your package there.', correct: true },
+          { text: 'Forward the message to IT for analysis before doing anything.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Always navigate to the official site by typing it directly into your browser — never via a link in a suspicious message. If there is a real delivery issue, it will appear on the carrier\'s official tracking page. Replying STOP can confirm your number is active to attackers. Clicking even to "just check" can trigger drive-by downloads or credential harvest pages.',
+          incorrect: 'Clicking the link is never safe regardless of what information you plan to enter — the page itself can be malicious (drive-by malware). Replying STOP confirms your number is active. The correct approach: type the carrier\'s real domain directly into your browser and check your tracking number there.',
+        },
+        points: 15,
+        hint: 'How can you verify the delivery status without using anything from the suspicious message?',
+      },
+    ],
+  },
+  {
+    id: 'ph-09',
+    category: 'phishing',
+    title: 'Calendar Invite Phishing',
+    desc: 'A malicious meeting invite lands directly in your calendar, bypassing email filters.',
+    tags: ['calendar-phishing', 'Google-Calendar', 'bypass'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'A calendar notification appears on your screen',
+        stageContent: '<div style="background:#1a2332;border:1px solid #30363d;border-radius:8px;padding:20px;max-width:420px">' +
+          '<div style="font-weight:600;margin-bottom:6px">Q2 Budget Review — All Managers</div>' +
+          '<div style="color:#8b949e;font-size:13px;margin-bottom:12px">Tomorrow, 10:00 AM – 11:00 AM · Conference Room B</div>' +
+          '<div style="font-size:13px;color:#e6edf3;line-height:1.7">Agenda and pre-read materials attached.<br><br>' +
+          'Please review before the meeting:<br>' +
+          '<span style="color:#4db8ff">https://docs-company-share.xyz/q2-budget-prereads</span><br><br>' +
+          'Organizer: CFO Office (cfo-office@company-notifications.net)</div></div>',
+        question: 'Why are calendar phishing attacks particularly effective at bypassing defenses?',
+        choices: [
+          { text: 'Calendars are encrypted end-to-end so security tools cannot scan them.', correct: false },
+          { text: 'Calendar invites arrive via the calendar API, not email — bypassing email security gateways and link scanners.', correct: true },
+          { text: 'Calendar invites always come from trusted internal sources.', correct: false },
+          { text: 'Security teams do not monitor calendar activity.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Calendar invites are delivered through a separate channel (CalDAV/calendar APIs) that most email security gateways do not inspect. Malicious links in calendar event descriptions bypass URL sandboxing tools that would catch the same link in an email. Additionally, many calendar apps auto-accept invites from external parties by default, adding the event silently. The combination of a trusted-looking interface and a security blind spot makes calendar phishing highly effective.',
+          incorrect: 'Calendar phishing works because invites travel via the calendar API, not email — so email security gateways and link scanners don\'t see them. The link in the event description is delivered directly to your calendar without any URL analysis. Many organizations have since deployed calendar-specific security controls, but it remains a significant gap.',
+        },
+        points: 20,
+        objectives: ['Understand calendar phishing bypass mechanics', 'Recognize external organizer red flags', 'Apply link verification to calendar events'],
+        hint: 'Email security tools scan email. What channel do calendar invites travel through?',
+      },
+    ],
+  },
+  {
+    id: 'ph-10',
+    category: 'phishing',
+    title: 'AI Voice Cloning (Vishing 2.0)',
+    desc: 'An AI-generated voice impersonates the CEO to authorize a fraudulent transfer.',
+    tags: ['AI', 'voice-cloning', 'deepfake', 'vishing'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Scenario: CFO receives a voicemail',
+        stageContent: '<em>The CFO receives a voicemail from a number showing the CEO\'s mobile. The voice sounds exactly like the CEO: "Hey, it\'s David. I\'m in back-to-back meetings. I need you to wire $240,000 to a new acquisition escrow today — it\'s time-sensitive. I\'ll explain later, just get it done. The wire details are in the email I just sent."</em><br><br>The "email from the CEO" arrives moments later from <strong>david.chen.ceo@company-secure-mail.com</strong>.',
+        question: 'What makes AI voice cloning uniquely dangerous compared to traditional impersonation?',
+        choices: [
+          { text: 'AI voices can only be detected by specialized software, making human verification impossible.', correct: false },
+          { text: 'Attackers can clone a convincing voice from as little as 30 seconds of public audio (interviews, conference talks, YouTube), eliminating voice as an authentication factor.', correct: true },
+          { text: 'AI voice calls always come from spoofed numbers, which are easy to identify.', correct: false },
+          { text: 'Voice cloning requires insider knowledge of the organization.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Modern AI voice cloning tools can produce convincing replicas from publicly available audio — a 30-second conference talk clip or podcast appearance is sufficient. This eliminates voice recognition as a trust signal. Combined with caller ID spoofing (which costs nothing), an attacker can convincingly impersonate any public-facing executive. This is an emerging and rapidly growing attack vector, especially targeting CFOs and finance teams.',
+          incorrect: 'AI voice cloning is dangerous because it requires minimal audio to work — 30 seconds of any public recording. The CEO\'s voice may be available from earnings calls, conference talks, or media interviews. Caller ID spoofing makes the number appear legitimate. Voice alone is no longer a reliable authentication factor.',
+        },
+        points: 25,
+        objectives: ['Understand AI voice cloning threat', 'Recognize that voice is no longer a reliable authenticator', 'Apply proper financial verification regardless of apparent caller identity'],
+        hint: 'Where might an attacker find 30 seconds of the CEO\'s voice without any insider access?',
+      },
+      {
+        type: 'analysis',
+        label: 'Defense strategy',
+        stageContent: 'Your organization wants to protect against AI voice impersonation attacks targeting financial transfers.',
+        question: 'Which control BEST addresses this threat?',
+        choices: [
+          { text: 'Train employees to listen carefully and detect AI-generated voices.', correct: false },
+          { text: 'Establish a pre-shared code word system for financial requests, combined with mandatory dual-approval for all wire transfers above a threshold.', correct: true },
+          { text: 'Block all calls from external mobile numbers.', correct: false },
+          { text: 'Use AI detection software to analyze all inbound calls in real time.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Human detection of AI voices is unreliable and getting worse as the technology improves. The effective defense is procedural: (1) Pre-arranged code words that only the real executive and authorized staff know — an AI clone cannot produce the right code word, (2) Dual-approval for financial transactions above a threshold — no single person can authorize a wire alone, regardless of who is asking. These controls make social engineering economically unviable regardless of how convincing the impersonation is.',
+          incorrect: 'Human voice detection is increasingly unreliable — studies show people cannot reliably distinguish AI voices. AI detection software is also an arms race. The reliable defenses are procedural: code words that attackers cannot know, and mandatory dual-approval so no individual can be socially engineered into acting alone.',
+        },
+        points: 20,
+        hint: 'If you can\'t reliably detect a fake voice, what process controls make voice impersonation irrelevant to the outcome?',
+      },
+    ],
+  },
 ];
 
 // ---- INCIDENT RESPONSE SCENARIOS ----------------------------------------------
@@ -463,6 +711,219 @@ const INCIDENT_SCENARIOS = [
       },
     ],
   },
+  {
+    id: 'ir-04',
+    category: 'incident',
+    title: 'Supply Chain Attack',
+    desc: 'A popular npm package is found to contain malicious code after an update.',
+    tags: ['supply-chain', 'dependency', 'malware'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Security scanner alert — 06:45 AM',
+        terminal: [
+          { type: 'output', text: '[06:45:01] SCAN: Analyzing installed packages...' },
+          { type: 'alert',  text: '[06:45:14] MALICIOUS CODE DETECTED: build-utils@2.3.1' },
+          { type: 'output', text: '[06:45:14] Installed on: 14 developer workstations, 3 CI/CD servers' },
+          { type: 'output', text: '[06:45:14] Obfuscated code in postinstall script makes outbound requests' },
+          { type: 'output', text: '[06:45:15] Destination: 185.220.101.9:443 (known malicious infrastructure)' },
+          { type: 'output', text: '[06:45:15] Previous version 2.3.0 — clean. This version published 18 hours ago.' },
+          { type: 'warn',   text: '[06:45:15] postinstall script ran automatically on all 17 affected systems' },
+        ],
+        question: 'What type of attack is this, and what makes it particularly difficult to detect?',
+        choices: [
+          { text: 'A zero-day exploit — because no patch is available.', correct: false },
+          { text: 'A supply chain attack — malicious code is injected into a legitimate, trusted dependency used by many downstream projects.', correct: true },
+          { text: 'A watering hole attack — because developers visit the npm registry.', correct: false },
+          { text: 'An insider threat — because a developer added the malicious package.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Supply chain attacks compromise a trusted upstream component so that downstream consumers unknowingly install malware. This is highly effective because: (1) developers trust their package manager, (2) the package has an established reputation, (3) the postinstall script runs automatically with user-level privileges during npm install, (4) it can affect thousands of projects simultaneously. Notable real examples: SolarWinds (2020), XZ Utils (2024), and dozens of npm package compromises.',
+          incorrect: 'This is a supply chain attack. The attacker compromised a legitimate npm package so that all downstream projects that install it receive the malicious version. Supply chain attacks are effective because they exploit trust — developers trust established packages and package managers don\'t default to code review before install.',
+        },
+        points: 25,
+        objectives: ['Identify supply chain attack characteristics', 'Understand postinstall script execution risks', 'Know dependency security controls'],
+        hint: 'The package was legitimate until 18 hours ago. The attacker didn\'t attack your organization directly — what did they attack instead?',
+      },
+      {
+        type: 'analysis',
+        label: 'Containment and prevention',
+        stageContent: 'The malicious package ran on 17 systems. You need to contain the incident and prevent recurrence.',
+        question: 'Which preventive control would MOST effectively catch this type of attack before it executes?',
+        choices: [
+          { text: 'Require developers to read all package source code before installing.', correct: false },
+          { text: 'Lock dependency versions with a lockfile and verify package integrity hashes in CI/CD before deployment.', correct: true },
+          { text: 'Only use packages with over 1 million weekly downloads.', correct: false },
+          { text: 'Disable npm and switch to manually downloaded packages.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Dependency pinning (lockfiles like package-lock.json) combined with integrity hash verification (npm uses SHA-512 hashes stored in the lockfile) ensures the exact same package bytes are installed every time. A malicious new version would have a different hash and fail verification. Additional controls: use a private npm registry that gates new versions, implement Software Composition Analysis (SCA) tools in CI/CD pipelines, and restrict postinstall scripts via npm config.',
+          incorrect: 'Lockfiles and hash verification are the technical controls that catch this. A lockfile pins the exact version AND hash — any changed package fails integrity checks. High download counts don\'t prevent compromise. Reading all source code is impractical. The CI/CD pipeline is the right place to enforce these checks automatically.',
+        },
+        points: 20,
+        hint: 'What changes between the clean version 2.3.0 and the malicious 2.3.1 that a cryptographic hash would detect?',
+      },
+    ],
+  },
+  {
+    id: 'ir-05',
+    category: 'incident',
+    title: 'Cryptominer on Production Server',
+    desc: 'A web server is behaving abnormally — high CPU and unusual outbound connections.',
+    tags: ['cryptominer', 'web-exploitation', 'persistence'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Monitoring alert — production web server WEB-03',
+        terminal: [
+          { type: 'alert',  text: '[11:02:44] ALERT: CPU sustained at 97% on WEB-03 for 40 minutes' },
+          { type: 'output', text: '[11:02:44] Process: /tmp/.x86_64 (hidden binary, not in package manifest)' },
+          { type: 'output', text: '[11:02:45] Outbound connection: WEB-03 → pool.minexmr.com:4444' },
+          { type: 'output', text: '[11:02:45] Cron job added: */5 * * * * /tmp/.x86_64 &>/dev/null' },
+          { type: 'warn',   text: '[11:02:46] Apache error log: PHP deserialization error 3 days ago from 45.55.22.1' },
+          { type: 'output', text: '[11:02:46] WEB-03 hosts customer-facing checkout — contains payment processing code' },
+        ],
+        question: 'Beyond the immediate resource drain, what is the most serious security concern here?',
+        choices: [
+          { text: 'The server will crash from CPU exhaustion.', correct: false },
+          { text: 'The attacker has code execution on a server handling payment data — the miner may be just one of multiple payloads.', correct: true },
+          { text: 'The mining activity will appear in the company\'s electricity bill.', correct: false },
+          { text: 'Other servers will be slowed by the network traffic to the mining pool.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. The cryptominer proves the attacker achieved remote code execution — the miner is just what was deployed visibly. The same access could have installed a backdoor, exfiltrated the payment database, modified checkout code to skim card numbers, or deployed ransomware. The presence of a miner on a payment server is a full incident requiring forensic investigation of everything that server touches, not just miner removal.',
+          incorrect: 'The miner proves code execution on a PCI-scope server. The real danger: the attacker may have also installed backdoors, skimmed payment data, or exfiltrated customer records. Removing the miner without full forensic investigation leaves unknown persistent access in place. This is a full security incident affecting potentially PCI DSS scope.',
+        },
+        points: 25,
+        objectives: ['Understand that miners indicate full code execution', 'Identify persistence mechanisms (cron)', 'Recognize PCI scope implications'],
+        hint: 'If the attacker can run a mining program, what else could they have run on this server?',
+      },
+    ],
+  },
+  {
+    id: 'ir-06',
+    category: 'incident',
+    title: 'Stolen Session Token — MFA Bypass',
+    desc: 'An account is accessed from two locations simultaneously despite MFA being enabled.',
+    tags: ['session-hijacking', 'AiTM', 'MFA-bypass', 'token-theft'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Conditional Access alert — Azure AD',
+        terminal: [
+          { type: 'output', text: '[14:22:01] SUCCESS: login — s.patel@company.com — MFA verified — IP: 10.0.1.45 (NYC office)' },
+          { type: 'alert',  text: '[14:22:47] ALERT: Same session active from IP: 91.108.4.212 (Ukraine)' },
+          { type: 'alert',  text: '[14:22:48] Impossible travel: NYC → Ukraine in 46 seconds' },
+          { type: 'output', text: '[14:22:52] Session: Downloaded 847 files from SharePoint' },
+          { type: 'output', text: '[14:22:55] Session: Created new mail forwarding rule → attacker@protonmail.com' },
+          { type: 'output', text: '[14:23:01] Note: s.patel reported clicking a "Microsoft login" link in email at 14:21' },
+        ],
+        question: 'MFA was successfully completed. How did the attacker gain access anyway?',
+        choices: [
+          { text: 'The attacker guessed the MFA code.', correct: false },
+          { text: 'An Adversary-in-the-Middle (AiTM) proxy relayed the real MFA session in real time, stealing the post-authentication session token.', correct: true },
+          { text: 'MFA was misconfigured and not actually enforced.', correct: false },
+          { text: 'The attacker performed a SIM-swap to receive the MFA code.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. AiTM phishing uses a reverse proxy that sits between the victim and the real Microsoft login. The victim authenticates fully (including MFA) through the proxy, which relays everything to Microsoft. The proxy captures the resulting session cookie post-authentication. MFA was completed — the attacker simply stole the authenticated session token. This is why FIDO2 hardware keys are the only truly phishing-resistant MFA: the authentication is cryptographically bound to the origin domain, so a proxy cannot relay it.',
+          incorrect: 'This is an AiTM (Adversary-in-the-Middle) attack. The attacker ran a proxy that relayed the victim\'s real Microsoft login — including the MFA step — and captured the session cookie afterward. The attacker never needed the password or MFA code directly. TOTP/SMS MFA does not protect against this. Only FIDO2 hardware keys are resistant to AiTM because they bind authentication to the actual domain.',
+        },
+        points: 30,
+        objectives: ['Understand AiTM session token theft', 'Know why TOTP MFA doesn\'t stop AiTM', 'Identify impossible travel as detection signal'],
+        hint: 'The MFA completed successfully against the real Microsoft server. At what point in the authentication flow did the attacker intercept something useful?',
+      },
+    ],
+  },
+  {
+    id: 'ir-07',
+    category: 'incident',
+    title: 'DDoS Response',
+    desc: 'The company website is unreachable — logs show a massive volumetric attack.',
+    tags: ['DDoS', 'availability', 'mitigation'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Network monitoring — 15:30 PM',
+        terminal: [
+          { type: 'alert',  text: '[15:30:01] CRITICAL: Inbound traffic spike — 48 Gbps (normal: ~200 Mbps)' },
+          { type: 'output', text: '[15:30:02] Source: 92,000+ unique IPs across 40+ countries' },
+          { type: 'output', text: '[15:30:02] Protocol: UDP flood targeting port 53 (DNS amplification)' },
+          { type: 'output', text: '[15:30:03] Upstream ISP link: 100% saturated' },
+          { type: 'alert',  text: '[15:30:04] Website response time: TIMEOUT. Customer services: OFFLINE' },
+          { type: 'output', text: '[15:30:05] Attack vector: DNS amplification — small queries returning large responses' },
+        ],
+        question: 'This is a DNS amplification DDoS. What makes amplification attacks particularly powerful?',
+        choices: [
+          { text: 'They encrypt the attack traffic so it cannot be filtered.', correct: false },
+          { text: 'Attackers send small spoofed requests to open DNS resolvers, which send large responses to the victim — amplifying bandwidth 50-70x.', correct: true },
+          { text: 'They use compromised internal hosts so perimeter defenses are bypassed.', correct: false },
+          { text: 'They target the application layer, bypassing network-level defenses.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. DNS amplification exploits open DNS resolvers: the attacker spoofs the victim\'s IP and sends a small DNS query (~60 bytes) to thousands of resolvers. Each resolver sends the large response (~3,000+ bytes) to the victim. This creates a 50x amplification factor. With 92,000 source IPs, the attacker generates 48 Gbps of traffic with a fraction of that upstream bandwidth. Defense: upstream scrubbing via your ISP or a DDoS mitigation provider (Cloudflare, Akamai Prolexic, AWS Shield).',
+          incorrect: 'DNS amplification works by spoofing the victim\'s IP in small requests to open resolvers, which flood the victim with large responses — 50-70x amplification. The attacker needs far less bandwidth than the attack generates. The only viable defenses are upstream scrubbing (DDoS protection services) or null-routing the targeted IP.',
+        },
+        points: 25,
+        objectives: ['Understand DNS amplification mechanics', 'Know volumetric DDoS characteristics', 'Identify appropriate mitigation approaches'],
+        hint: 'What is the ratio between the size of a DNS query and its response? How does that help the attacker?',
+      },
+      {
+        type: 'analysis',
+        label: 'Mitigation options',
+        stageContent: 'The attack is ongoing. Your upstream ISP link is saturated at 100 Gbps capacity. Standard firewall rules cannot help because the bandwidth is exhausted before traffic reaches your network.',
+        question: 'What is the most effective immediate mitigation?',
+        choices: [
+          { text: 'Add more firewall rules to block the source IPs.', correct: false },
+          { text: 'Call your ISP to implement upstream null routing of your attacked IP, or activate a cloud-based DDoS scrubbing service.', correct: true },
+          { text: 'Reboot the web servers to clear the traffic queues.', correct: false },
+          { text: 'Increase server capacity to handle the additional traffic.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. When the upstream link is saturated, no on-premises device can help — the attack traffic never even reaches your firewall. The solution must be upstream: (1) ask your ISP to null-route (blackhole) the attacked IP at their edge, stopping traffic before it reaches your link, or (2) activate a cloud DDoS scrubbing service (Cloudflare, Akamai) that absorbs and filters traffic at scale before forwarding clean traffic to you. Rebooting servers or adding firewall rules is irrelevant when the pipe itself is full.',
+          incorrect: 'When the upstream pipe is full, on-premises solutions are useless. The fix must happen upstream of your connection — null routing at the ISP level or cloud scrubbing that filters traffic before it reaches your link.',
+        },
+        points: 20,
+        hint: 'Your pipe is 100% full. Can any device on your network even see the traffic to block it?',
+      },
+    ],
+  },
+  {
+    id: 'ir-08',
+    category: 'incident',
+    title: 'Zero-Day Exploitation',
+    desc: 'A critical vulnerability with no available patch is being actively exploited.',
+    tags: ['zero-day', 'virtual-patching', 'WAF'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Threat intelligence feed — 08:00 AM',
+        terminal: [
+          { type: 'alert',  text: '[08:00:12] CRITICAL ADVISORY: CVE-2026-XXXX — Apache HTTP Server' },
+          { type: 'output', text: '[08:00:12] Type: Remote Code Execution — CVSS Score: 9.8' },
+          { type: 'output', text: '[08:00:12] Affected: Apache 2.4.0 – 2.4.58 (your version: 2.4.51)' },
+          { type: 'output', text: '[08:00:12] Patch status: NOT YET AVAILABLE — vendor notified 48 hours ago' },
+          { type: 'warn',   text: '[08:00:13] Exploit: Proof-of-concept code publicly available on GitHub' },
+          { type: 'output', text: '[08:00:13] Attack vector: Malformed HTTP request header — no authentication required' },
+          { type: 'alert',  text: '[08:00:15] WAF logs: 3 exploitation attempts detected from 45.33.21.8 in past hour' },
+        ],
+        question: 'No vendor patch exists. What is the most effective immediate mitigation?',
+        choices: [
+          { text: 'Wait for the official patch — acting without it may cause instability.', correct: false },
+          { text: 'Shut down all Apache servers until a patch is released.', correct: false },
+          { text: 'Deploy a WAF virtual patch rule blocking the malformed header pattern, and restrict access to only known-good IPs.', correct: true },
+          { text: 'Upgrade to the latest Apache version even though it\'s also affected.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Virtual patching via WAF is the standard response to zero-days with no available patch. The WAF inspects HTTP requests and blocks the malformed header pattern used by the exploit — without modifying the underlying application. This buys time until the vendor patch is released. Additional controls: restrict server access via network ACLs to reduce the attack surface, increase logging/alerting on the specific attack pattern, and monitor for any signs of successful exploitation.',
+          incorrect: 'Virtual patching via WAF is the standard zero-day response when no vendor patch exists. The WAF blocks the specific exploit pattern at the network layer without touching the application. Complete shutdown may not be operationally viable. Waiting without controls is irresponsible given active public exploits exist.',
+        },
+        points: 25,
+        objectives: ['Define zero-day vulnerabilities', 'Understand virtual patching as a mitigation', 'Know response priorities for unpatched critical CVEs'],
+        hint: 'You cannot fix the vulnerability in the software. But can you stop the specific exploit pattern from reaching the vulnerable code?',
+      },
+    ],
+  },
 ];
 
 // ---- PASSWORD SCENARIOS -------------------------------------------------------
@@ -620,6 +1081,181 @@ const PASSWORD_SCENARIOS = [
       },
     ],
   },
+  {
+    id: 'pw-04',
+    category: 'passwords',
+    title: 'Password Manager Adoption',
+    desc: 'Evaluate the security tradeoffs of using a password manager.',
+    tags: ['password-manager', 'zero-knowledge', 'reuse'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Employee concern during security training',
+        stageContent: 'An employee says: <em>"I don\'t trust password managers. If the company gets hacked, the attacker gets ALL my passwords at once. I\'d rather remember my passwords myself."</em><br><br>The employee currently uses a base password + site suffix (e.g., "Base!123amazon", "Base!123google").',
+        question: 'Which response best addresses the employee\'s concern?',
+        choices: [
+          { text: 'Their concern is valid — password managers are single points of failure and should be avoided.', correct: false },
+          { text: 'Modern password managers use zero-knowledge architecture: the vendor never holds your master password or decryption key, so even a vendor breach doesn\'t expose passwords.', correct: true },
+          { text: 'The risk is acceptable because password managers are convenient.', correct: false },
+          { text: 'They should write passwords in a physical notebook instead.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Reputable password managers use zero-knowledge encryption — your vault is encrypted client-side with a key derived from your master password before it ever leaves your device. The vendor stores only encrypted blobs they mathematically cannot decrypt. Meanwhile, the employee\'s current approach (base + suffix) is a well-known pattern that attackers exploit: if one breach reveals "Base!123amazon", they immediately try "Base!123" variations across all other services.',
+          incorrect: 'Zero-knowledge architecture means the password manager vendor cannot decrypt your vault even if breached — they never have the key. The employee\'s "base + suffix" pattern is actually far more dangerous: it\'s a recognized pattern that credential stuffing tools are specifically designed to exploit.',
+        },
+        points: 15,
+        objectives: ['Understand zero-knowledge password manager architecture', 'Recognize the danger of password pattern reuse', 'Know the security case for password managers'],
+        hint: 'What does "zero-knowledge" mean about what the vendor can see? And what would an attacker do with "Base!123amazon"?',
+      },
+      {
+        type: 'analysis',
+        label: 'Master password and MFA',
+        stageContent: 'The employee agrees to use a password manager. They ask: "What happens if someone gets my master password?"',
+        question: 'What is the most effective combination of controls to protect a password manager account?',
+        choices: [
+          { text: 'A long master password alone is sufficient protection.', correct: false },
+          { text: 'A strong master passphrase (5+ random words) combined with FIDO2 hardware key MFA on the password manager account.', correct: true },
+          { text: 'Changing the master password every 30 days.', correct: false },
+          { text: 'Using the same master password as your email so you only have one to remember.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. The master password should be a long passphrase (5+ random words = high entropy, memorable) that is unique and never used anywhere else. FIDO2 MFA on the password manager itself means an attacker who obtains the master password still cannot decrypt the vault without the physical hardware key. This creates a two-layer defense: something you know (passphrase) + something you have (hardware key).',
+          incorrect: 'The master password must be unique, long (5+ random words), and backed by hardware MFA. Never reuse the master password anywhere — it\'s the key to everything. Frequent rotation is counterproductive. A hardware key as MFA means the vault is protected even if the master password is compromised.',
+        },
+        points: 15,
+        hint: 'What two independent factors would stop an attacker who somehow obtained the master password?',
+      },
+    ],
+  },
+  {
+    id: 'pw-05',
+    category: 'passwords',
+    title: 'Privileged Account Management',
+    desc: 'A sysadmin uses their admin account for all daily activities.',
+    tags: ['PAM', 'least-privilege', 'admin'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'IT audit finding',
+        stageContent: 'An audit finds that 8 of 10 sysadmins use their domain administrator accounts as their primary daily-use accounts for email, web browsing, Slack, and all other tasks. They argue it\'s more convenient than switching accounts.',
+        question: 'What is the primary security risk of using admin accounts for everyday tasks?',
+        choices: [
+          { text: 'Admin accounts have weaker passwords by default.', correct: false },
+          { text: 'Any malware, phishing, or browser exploit during daily use executes with full admin privileges, giving attackers domain-level access instantly.', correct: true },
+          { text: 'Admin accounts are visible in Active Directory, making them easier targets.', correct: false },
+          { text: 'Using admin accounts for email violates email retention policies.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. If a sysadmin clicks a malicious email attachment or visits a compromised website while using their DA account, any code that executes has full domain administrator rights. This immediately allows the attacker to: create new admin accounts, disable security tools, dump all Active Directory credentials, and move laterally across the entire domain. The principle of least privilege requires using the minimum necessary permissions for each task — admin access only when performing admin tasks.',
+          incorrect: 'The risk is execution context: any malware running in the admin\'s session inherits admin privileges. A phishing document, malicious browser extension, or drive-by download immediately becomes domain-level compromise. Least privilege requires separation: standard account for daily work, admin account only when explicitly needed for admin tasks.',
+        },
+        points: 20,
+        objectives: ['Apply least privilege to admin account usage', 'Understand privilege escalation via malware execution context', 'Know Privileged Access Workstation (PAW) concept'],
+        hint: 'When malware runs on your machine, what user context does it run in? What can it do with domain admin rights?',
+      },
+    ],
+  },
+  {
+    id: 'pw-06',
+    category: 'passwords',
+    title: 'Default Credentials Audit',
+    desc: 'A network scan reveals multiple devices using factory-default passwords.',
+    tags: ['default-credentials', 'IoT', 'hardening'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Internal vulnerability scan results',
+        terminal: [
+          { type: 'output', text: '[SCAN] 192.168.10.1   — Cisco Router     — admin/admin     — VERIFIED LOGIN' },
+          { type: 'alert',  text: '[SCAN] 192.168.10.50  — Hikvision Camera  — admin/12345     — VERIFIED LOGIN' },
+          { type: 'alert',  text: '[SCAN] 192.168.10.51  — Hikvision Camera  — admin/12345     — VERIFIED LOGIN' },
+          { type: 'warn',   text: '[SCAN] 192.168.10.100 — Cisco Switch      — cisco/cisco     — VERIFIED LOGIN' },
+          { type: 'alert',  text: '[SCAN] 192.168.10.200 — Synology NAS      — admin/(blank)   — VERIFIED LOGIN' },
+          { type: 'output', text: '[SCAN] 192.168.10.201 — Synology NAS      — admin/custom    — LOGIN FAILED' },
+          { type: 'output', text: '[INFO] Default credential lists are publicly available for all above vendors.' },
+        ],
+        question: 'Why are default credentials considered a critical vulnerability rather than a medium risk?',
+        choices: [
+          { text: 'Because default credentials are short and easy to brute-force.', correct: false },
+          { text: 'Because they require zero effort to exploit — they are documented publicly and require no skill, making mass exploitation trivial.', correct: true },
+          { text: 'Because routers and cameras are not protected by firewalls.', correct: false },
+          { text: 'Because default passwords cannot be changed on some devices.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Default credentials are critical because exploitation requires literally zero skill — every attacker knows to try admin/admin, admin/password, admin/12345 first. They appear in every credential stuffing list and automated scanner. A single compromised camera or NAS can provide network persistence, lateral movement, or data exfiltration. The Mirai botnet (which caused massive internet outages in 2016) was built almost entirely from IoT devices with default credentials.',
+          incorrect: 'Default credentials are critical because they require no effort — they are publicly documented for every vendor. Automated tools scan the internet for these in minutes. Mirai and similar botnets compromise millions of IoT devices using default credentials automatically. Any device with a default credential is effectively already owned.',
+        },
+        points: 15,
+        objectives: ['Understand why default credentials are critical severity', 'Apply device hardening procedures', 'Recognize IoT security risks'],
+        hint: 'What skill level does an attacker need to try "admin/admin"? Where can they find default credentials for every vendor?',
+      },
+    ],
+  },
+  {
+    id: 'pw-07',
+    category: 'passwords',
+    title: 'Password Reset Process Security',
+    desc: 'The help desk password reset procedure has a social engineering vulnerability.',
+    tags: ['help-desk', 'identity-verification', 'reset'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Current help desk procedure',
+        stageContent: 'The IT help desk resets user passwords over the phone by verifying:<br><br>' +
+          '1. The caller\'s full name<br>' +
+          '2. Their department<br>' +
+          '3. Their manager\'s name<br><br>' +
+          'Once verified, they reset the password and read the temporary password to the caller.',
+        question: 'What is the fundamental weakness in this verification procedure?',
+        choices: [
+          { text: 'Three verification factors are not enough — five should be required.', correct: false },
+          { text: 'All three factors (name, department, manager) are obtainable from LinkedIn or a company directory in under 2 minutes.', correct: true },
+          { text: 'Passwords should never be read aloud over the phone.', correct: false },
+          { text: 'The procedure is fine — most callers are legitimate employees.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Name, department, and manager name are public information — visible on LinkedIn, company websites, email signatures, and org charts. An attacker who wants to take over a specific account simply researches these details first and calls the help desk. This is exactly how major incidents have occurred (e.g., the 2020 Twitter hack began with social engineering of a help desk agent). Verification must use information that is NOT publicly available.',
+          incorrect: 'All three factors are public information available on LinkedIn. The number of factors is irrelevant if all of them can be researched by an attacker. Strong identity verification for password resets requires something that cannot be looked up: a pre-registered secondary phone number, a personal identification number (separate from the account password), or manager approval via a separate verified channel.',
+        },
+        points: 20,
+        objectives: ['Identify weak identity verification factors', 'Apply the principle that verification must use non-public information', 'Know secure password reset practices'],
+        hint: 'Could an attacker find all three of these data points for any employee at your company using only public sources in 2 minutes?',
+      },
+    ],
+  },
+  {
+    id: 'pw-08',
+    category: 'passwords',
+    title: 'Passkeys — Passwordless Authentication',
+    desc: 'Evaluate whether passkeys are a secure replacement for passwords.',
+    tags: ['passkeys', 'FIDO2', 'WebAuthn', 'passwordless'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Technology review: Passkeys',
+        stageContent: 'Your organization is evaluating passkeys (FIDO2/WebAuthn) to replace passwords for employee logins. A passkey works as follows:<br><br>' +
+          '• A public/private key pair is generated on the user\'s device<br>' +
+          '• The <strong>public key</strong> is sent to and stored on the server<br>' +
+          '• The <strong>private key</strong> never leaves the device<br>' +
+          '• Login: the server sends a challenge; the device signs it with the private key; the server verifies with the public key<br>' +
+          '• Device biometric (fingerprint/Face ID) protects the private key locally',
+        question: 'Which of these attacks does passkey authentication make impossible?',
+        choices: [
+          { text: 'Phishing, credential stuffing, and password breach — because no reusable password is ever transmitted or stored on the server.', correct: true },
+          { text: 'Device theft — because the attacker cannot access the device.', correct: false },
+          { text: 'All authentication attacks, including session hijacking.', correct: false },
+          { text: 'Brute force only — because the key is too long to guess.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Passkeys eliminate three major attack classes simultaneously: (1) Phishing — the authentication is cryptographically bound to the origin domain; a fake site cannot obtain a valid signature, (2) Credential stuffing — there is no password to stuff; server databases contain only public keys, which are useless to attackers, (3) Password breaches — nothing on the server can authenticate a user; even a full database dump gives the attacker nothing. Session hijacking remains possible (you can still steal a post-auth token), but the initial authentication attack surface is massively reduced.',
+          incorrect: 'Passkeys eliminate phishing (domain-bound), credential stuffing (no password to reuse), and password database breaches (server only stores public keys). Device theft is partially mitigated by biometrics but not eliminated. Session hijacking after authentication is still possible. Passkeys are not a silver bullet but they eliminate the most common authentication attack vectors.',
+        },
+        points: 20,
+        objectives: ['Understand passkey cryptographic architecture', 'Know which attack classes passkeys eliminate', 'Identify remaining attack surfaces'],
+        hint: 'What does the server store? What does the attacker get if they breach the server\'s credential database?',
+      },
+    ],
+  },
 ];
 
 // ---- SOCIAL ENGINEERING SCENARIOS -------------------------------------------
@@ -759,6 +1395,163 @@ const SOCIAL_SCENARIOS = [
         },
         points: 15,
         hint: 'Think about the two separate motivations the label "Q1 2026 Salary Review — Confidential" creates in the person who finds it.',
+      },
+    ],
+  },
+  {
+    id: 'se-04',
+    category: 'social',
+    title: 'LinkedIn Job Offer Targeting',
+    desc: 'A recruiter message leads to a fake job portal harvesting credentials.',
+    tags: ['LinkedIn', 'spear-phishing', 'credential-harvest'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'LinkedIn message received',
+        stageContent: '<em>"Hi [Your Name], I came across your profile and I\'m impressed with your background in cloud infrastructure. We have a Senior DevOps role paying $180K — well above market. It\'s a perfect match for your skills at [Your Company]. Could you take 5 minutes to review the role requirements and apply? Just use your work email to log in so we can verify your profile."</em><br><br>The link goes to: <code>careers-talent-hub.net/apply</code>',
+        question: 'What specific detail in this message is the strongest red flag?',
+        choices: [
+          { text: 'The salary is higher than market rate — legitimate jobs don\'t pay that well.', correct: false },
+          { text: 'The request to log in with your work email credentials on an external third-party site.', correct: true },
+          { text: 'Legitimate recruiters always use InMail, not messages.', correct: false },
+          { text: 'The domain "careers-talent-hub.net" doesn\'t end in .com.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. No legitimate job application portal requires your current employer\'s email credentials. This request is designed to harvest your corporate username and password. Attackers use LinkedIn because: (1) your profile reveals your exact employer, role, and tech stack — enabling hyper-personalized messages, (2) the professional context lowers suspicion, (3) career ambition is a reliable emotional trigger. High salary figures are bait to create motivation to proceed despite doubts.',
+          incorrect: 'The critical red flag is the login requirement using work credentials on an external site. Legitimate job applications use the applicant\'s personal email or LinkedIn profile — never corporate credentials. The salary and domain are distractors. The goal is credential theft.',
+        },
+        points: 20,
+        objectives: ['Recognize credential harvesting in professional social engineering', 'Understand why LinkedIn is a high-value attack vector', 'Identify emotional triggers used in job offer scams'],
+        hint: 'Why would a job application need your current employer\'s login credentials? What could they do with those?',
+      },
+    ],
+  },
+  {
+    id: 'se-05',
+    category: 'social',
+    title: 'Shoulder Surfing',
+    desc: 'Sensitive information is observed by a nearby stranger in a public space.',
+    tags: ['shoulder-surfing', 'physical-security', 'awareness'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Scenario: Working at an airport',
+        stageContent: 'A developer is working at an airport lounge before a flight. They are:<br><br>' +
+          '• Logged into the corporate VPN<br>' +
+          '• Reviewing production database credentials in a password manager<br>' +
+          '• Writing code containing an API key in plaintext<br>' +
+          '• On a video call discussing an unreleased product<br><br>' +
+          'The adjacent seats are occupied by strangers. No privacy screen is installed.',
+        question: 'Which of these activities carries the HIGHEST risk in this environment?',
+        choices: [
+          { text: 'Being connected to the VPN on public Wi-Fi.', correct: false },
+          { text: 'Discussing the unreleased product on a video call in an audible public space.', correct: true },
+          { text: 'Reviewing credentials in a password manager — they\'re encrypted anyway.', correct: false },
+          { text: 'Writing code with a plaintext API key visible on screen.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. An audible video call in a public space exposes information to everyone within earshot — this is not limited by sight lines or screen orientation. Competitors, journalists, or attackers can overhear unreleased product details, customer names, strategic plans, or internal system architecture. VPN encryption protects the data in transit. The API key is a screen-visible risk but limited to nearby observers. The video call broadcasts to the entire room.',
+          incorrect: 'The video call is the highest risk because it exposes information acoustically to everyone within earshot, not just people who can see your screen. Audio exposure in public spaces is harder to control than visual exposure. Use headphones and be aware of what you say aloud. A privacy screen addresses screen-viewing but not audio.',
+        },
+        points: 15,
+        objectives: ['Identify audio as an overlooked information leakage vector', 'Assess public workspace security risks', 'Apply privacy controls appropriate to environment'],
+        hint: 'Which of these can be seen only by someone nearby vs. which can be heard by everyone in a large room?',
+      },
+    ],
+  },
+  {
+    id: 'se-06',
+    category: 'social',
+    title: 'Dumpster Diving & Information Disclosure',
+    desc: 'Discarded documents enable a targeted attack on the organization.',
+    tags: ['dumpster-diving', 'physical-security', 'OSINT'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Security assessment finding',
+        stageContent: 'A red team conducting a physical security assessment retrieves the following from unsecured recycling bins outside the office:<br><br>' +
+          '• Printed org chart showing names, titles, and reporting lines<br>' +
+          '• 3 printed emails discussing a pending merger (marked CONFIDENTIAL)<br>' +
+          '• An old employee ID badge (deactivated employee)<br>' +
+          '• A printed IT asset list with server names and IP ranges<br>' +
+          '• A sticky note with "VPN: CompanyVPN2024" written on it',
+        question: 'Which recovered item poses the MOST immediate technical threat?',
+        choices: [
+          { text: 'The org chart — enables targeted phishing.', correct: false },
+          { text: 'The sticky note with the VPN password — may provide direct network access.', correct: true },
+          { text: 'The merger documents — sensitive business intelligence.', correct: false },
+          { text: 'The IT asset list — reveals network topology.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. A VPN password provides potential direct network access — the attacker may be able to connect to the corporate network as a legitimate user. The other items enable social engineering, OSINT, and planning, but none provide immediate technical entry. If the VPN password is current and not user-specific, the attacker has network access requiring no further steps. This finding should trigger immediate VPN credential rotation.',
+          incorrect: 'The VPN password on the sticky note is the most immediately actionable — it may provide direct network access right now. All other items require further steps (phishing setup, network reconnaissance). Immediate action: rotate VPN credentials. Long-term: shred all documents, enforce clean desk policy, implement secure disposal for all physical media.',
+        },
+        points: 20,
+        objectives: ['Understand physical information security risks', 'Identify which discarded items carry highest technical risk', 'Know secure disposal requirements'],
+        hint: 'Which item requires no additional steps to use — just try it directly against a company system right now?',
+      },
+    ],
+  },
+  {
+    id: 'se-07',
+    category: 'social',
+    title: 'Watering Hole Attack',
+    desc: 'Multiple workstations connect to a suspicious domain after visiting an industry website.',
+    tags: ['watering-hole', 'drive-by', 'browser-exploit'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'SIEM correlation alert — Tuesday 10:15 AM',
+        terminal: [
+          { type: 'output', text: '[10:15:02] CORRELATION: 7 workstations → same unknown domain in 30 min window' },
+          { type: 'output', text: '[10:15:02] Domain: analytics-cdn-update.com (registered 3 days ago)' },
+          { type: 'output', text: '[10:15:03] All 7 users browsed: securityweek.com between 09:40–10:10' },
+          { type: 'warn',   text: '[10:15:03] Beacon pattern: all 7 hosts called analytics-cdn-update.com within 10 sec of visiting securityweek.com' },
+          { type: 'alert',  text: '[10:15:04] Threat intel: analytics-cdn-update.com flagged as malware distribution — 2 hours ago' },
+          { type: 'output', text: '[10:15:05] Browser versions on affected hosts: Chrome 119, Firefox 118 (both outdated)' },
+        ],
+        question: 'What is a watering hole attack and why is it harder to defend against than phishing?',
+        choices: [
+          { text: 'Attackers compromise a website their targets regularly visit and inject malicious code — victims are infected just by browsing a site they trust.', correct: true },
+          { text: 'Attackers flood email inboxes with links to the same malicious site.', correct: false },
+          { text: 'Attackers intercept DNS queries and redirect users to a malicious clone.', correct: false },
+          { text: 'Attackers compromise the user\'s router to redirect all traffic.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Watering hole attacks compromise a website that the target group regularly visits (in this case, a security news site ironically). When victims visit the legitimate-but-compromised site, malicious scripts execute silently via browser vulnerabilities — no clicking required, no suspicious email. This bypasses phishing training entirely because the user did nothing wrong. Defense relies on browser/OS patching, browser exploit mitigation, and behavioral detection (like this SIEM correlation).',
+          incorrect: 'A watering hole attack compromises a site the targets trust and visit regularly. Victims are infected just by browsing — no phishing email, no suspicious link to identify. The user did everything right. Defense: keep browsers updated (the outdated versions here are the exploit vector), use browser exploit mitigations (sandboxing), and monitor for anomalous outbound connections from browsing sessions.',
+        },
+        points: 25,
+        objectives: ['Understand watering hole attack mechanics', 'Know why it bypasses user training', 'Identify browser patching as primary defense'],
+        hint: 'The user visited a website they visit every day and did nothing suspicious. How did they still get infected?',
+      },
+    ],
+  },
+  {
+    id: 'se-08',
+    category: 'social',
+    title: 'Quid Pro Quo Attack',
+    desc: 'A caller offers free "IT services" in exchange for account credentials.',
+    tags: ['quid-pro-quo', 'tech-support-scam', 'phone'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Scenario: An employee receives a call',
+        stageContent: '<em>"Hi there, this is Mike from the IT department. We\'re running a free security upgrade today for employees in your building — takes about 10 minutes. I can clean up your machine remotely, improve your startup time, and run a virus scan at no charge. To get started, I just need your Windows username and password so I can log in remotely. Sound good?"</em>',
+        question: 'This is a quid pro quo attack. What distinguishes it from other social engineering types?',
+        choices: [
+          { text: 'It uses phone calls, which are harder to trace than emails.', correct: false },
+          { text: 'It offers a benefit or service in exchange for information — exploiting the reciprocity principle.', correct: true },
+          { text: 'It impersonates IT, which makes it more convincing than other impersonations.', correct: false },
+          { text: 'It requires the victim to take action (installing software) rather than just providing information.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Quid pro quo ("something for something") attacks work by offering a perceived benefit — free upgrade, faster computer, virus removal — in exchange for access or credentials. This exploits the reciprocity principle: people feel obligated to cooperate when offered help. The "free IT service" framing also reduces suspicion because the offer seems to benefit the victim. Key rule: IT will NEVER ask for your password under any circumstances. If they need remote access, they use tools that don\'t require your credentials.',
+          incorrect: 'Quid pro quo is defined by the exchange: "I\'ll do something beneficial for you in exchange for your credentials/access." It exploits reciprocity. The distinction from vishing: vishing creates urgency/fear, quid pro quo creates willingness through an offer. The defense is the same: hang up, call IT on the official number.',
+        },
+        points: 20,
+        objectives: ['Define quid pro quo social engineering', 'Understand the reciprocity psychological principle', 'Know that IT never asks for passwords'],
+        hint: 'What is the attacker offering, and what do they want in return? Which psychological principle does a free offer activate?',
       },
     ],
   },
@@ -937,6 +1730,201 @@ const NETWORK_SCENARIOS = [
       },
     ],
   },
+  {
+    id: 'net-04',
+    category: 'network',
+    title: 'Port Scan Detection',
+    desc: 'An IDS alerts on systematic port reconnaissance against DMZ hosts.',
+    tags: ['reconnaissance', 'port-scanning', 'IDS'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'IDS alerts — 02:17 AM',
+        terminal: [
+          { type: 'warn',   text: '[02:17:01] IDS: Port scan detected — source: 203.0.113.55' },
+          { type: 'output', text: '[02:17:01] Target: 198.51.100.10 (DMZ web server)' },
+          { type: 'output', text: '[02:17:01] Ports probed: 1–65535 (full TCP SYN scan)' },
+          { type: 'output', text: '[02:17:02] Scan rate: ~1,000 ports/second — completed in ~65 seconds' },
+          { type: 'output', text: '[02:17:02] Open ports found by scanner: 22, 80, 443, 3306, 8080, 8443' },
+          { type: 'warn',   text: '[02:17:03] Note: Port 3306 (MySQL) and 8080 (dev server) open to internet' },
+          { type: 'output', text: '[02:17:03] No exploitation attempts detected yet.' },
+        ],
+        question: 'The scan found open ports 3306 and 8080 on an internet-facing server. Why is this a critical finding independent of the scan itself?',
+        choices: [
+          { text: 'Because port scanning is illegal and the attacker can now be prosecuted.', correct: false },
+          { text: 'Port 3306 (MySQL) and 8080 (dev) should never be exposed to the internet — they expose database access and a development server to direct attack.', correct: true },
+          { text: 'The high scan speed indicates an advanced persistent threat actor.', correct: false },
+          { text: 'The scan will have caused performance degradation on the web server.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. The scan itself is reconnaissance — a precursor to attack. But the real finding is the exposure: MySQL on port 3306 exposed to the internet means anyone can attempt to authenticate to the database directly (brute force, exploit known vulnerabilities). Port 8080 suggests a development server is internet-accessible, which often lacks production hardening. These should be blocked at the perimeter firewall immediately — databases should only accept connections from application servers on the internal network.',
+          incorrect: 'The scan reveals a configuration problem: MySQL and a dev server are directly exposed to the internet. A scan is just reconnaissance — the actual risk is the exposed attack surface. Any attacker can now directly target the MySQL port with brute force or known exploits. Immediate fix: firewall rules to block 3306 and 8080 from all external sources.',
+        },
+        points: 20,
+        objectives: ['Understand port scanning as reconnaissance', 'Identify which ports should never be internet-facing', 'Apply firewall egress/ingress principles'],
+        hint: 'What can an attacker do directly with an internet-accessible MySQL port? Should a database ever be reachable from the public internet?',
+      },
+    ],
+  },
+  {
+    id: 'net-05',
+    category: 'network',
+    title: 'ARP Poisoning — Man in the Middle',
+    desc: 'A host on the network is sending fraudulent ARP replies to intercept traffic.',
+    tags: ['ARP-poisoning', 'MitM', 'DAI'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Network monitoring alert',
+        terminal: [
+          { type: 'alert',  text: '[09:44:12] ARP ANOMALY: Conflicting MAC for 10.0.1.1 (gateway)' },
+          { type: 'output', text: '[09:44:12] Legitimate: 10.0.1.1 → MAC aa:bb:cc:dd:ee:01 (router)' },
+          { type: 'alert',  text: '[09:44:13] Spoofed:    10.0.1.1 → MAC 11:22:33:44:55:66 (host 10.0.1.77)' },
+          { type: 'output', text: '[09:44:13] Gratuitous ARP replies sent by 10.0.1.77 — rate: 2/second' },
+          { type: 'warn',   text: '[09:44:14] Effect: Hosts caching spoofed ARP → traffic now routing through 10.0.1.77' },
+          { type: 'output', text: '[09:44:14] 10.0.1.77 has IP forwarding enabled — acting as transparent proxy' },
+        ],
+        question: 'What is the attacker able to do with this ARP poisoning setup?',
+        choices: [
+          { text: 'Perform a DoS attack by dropping all forwarded traffic.', correct: false },
+          { text: 'Intercept, read, and potentially modify all traffic between victims and the gateway — including HTTP sessions and any unencrypted data.', correct: true },
+          { text: 'Gain admin access to the router.', correct: false },
+          { text: 'Block specific users from accessing the network.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. With IP forwarding enabled, 10.0.1.77 transparently relays traffic while capturing a copy of everything passing through. Unencrypted HTTP sessions, credentials, cookies, and data are fully readable. TLS-encrypted traffic can be attacked via SSL stripping (downgrading HTTPS to HTTP) if HSTS is not enforced. The victim has no indication anything is wrong — their traffic reaches its destination normally. This is a classic man-in-the-middle position.',
+          incorrect: 'ARP poisoning with IP forwarding creates a transparent man-in-the-middle position. All traffic flows through the attacker\'s machine, giving them full visibility into unencrypted traffic and opportunities to modify it. TLS provides some protection but can be stripped on improperly configured sites.',
+        },
+        points: 25,
+        objectives: ['Understand ARP poisoning mechanics', 'Know what a MitM position enables', 'Identify Dynamic ARP Inspection as the defense'],
+        hint: 'If all traffic routes through 10.0.1.77 and IP forwarding is on, what can the attacker do before passing traffic along?',
+      },
+      {
+        type: 'analysis',
+        label: 'Defense: Dynamic ARP Inspection',
+        stageContent: 'The security team wants to prevent ARP poisoning at the network layer going forward.',
+        question: 'How does Dynamic ARP Inspection (DAI) prevent this attack?',
+        choices: [
+          { text: 'It encrypts all ARP traffic on the VLAN.', correct: false },
+          { text: 'It validates ARP packets against the DHCP snooping binding table — dropping any ARP reply where the MAC/IP pair doesn\'t match a known DHCP lease.', correct: true },
+          { text: 'It blocks all ARP traffic except from the router.', correct: false },
+          { text: 'It rate-limits ARP traffic to prevent flooding.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. DAI works with DHCP snooping: when a host receives an IP via DHCP, the switch records the MAC/IP/port binding. DAI then checks every ARP reply against this table — if a host claims to own an IP it didn\'t get from DHCP, the ARP reply is dropped. Since 10.0.1.77 doesn\'t have a DHCP lease for 10.0.1.1 (the gateway IP), its spoofed ARP replies would be silently dropped. Trusted ports (uplinks) are exempt from DAI inspection.',
+          incorrect: 'DAI validates ARP packets against the DHCP snooping binding table. If a host sends a gratuitous ARP claiming to own the gateway\'s IP, but has no DHCP lease for that IP, the switch drops the packet. This makes ARP spoofing impossible on properly configured managed switches.',
+        },
+        points: 20,
+        hint: 'The switch knows which MAC address legitimately has each IP (from DHCP records). How does it use that knowledge to validate ARP replies?',
+      },
+    ],
+  },
+  {
+    id: 'net-06',
+    category: 'network',
+    title: 'C2 Beaconing Detection',
+    desc: 'A host makes suspiciously regular outbound connections to an external IP.',
+    tags: ['beaconing', 'C2', 'malware', 'timing'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Proxy logs — 24-hour analysis of host 10.0.2.44',
+        terminal: [
+          { type: 'output', text: '[00:05:00] 10.0.2.44 → 45.155.205.233:443  HTTPS  2.1 KB' },
+          { type: 'output', text: '[00:10:00] 10.0.2.44 → 45.155.205.233:443  HTTPS  1.8 KB' },
+          { type: 'output', text: '[00:15:00] 10.0.2.44 → 45.155.205.233:443  HTTPS  2.0 KB' },
+          { type: 'output', text: '[... 284 additional identical connections at exact 5-minute intervals ...]' },
+          { type: 'warn',   text: '[23:55:00] 10.0.2.44 → 45.155.205.233:443  HTTPS  2.2 KB' },
+          { type: 'output', text: '[ANALYSIS] Interval: 300 seconds ± 0 seconds. Variance: 0. 288 connections/day.' },
+          { type: 'output', text: '[ANALYSIS] Destination: newly registered domain, no business justification' },
+        ],
+        question: 'What does zero-variance, perfectly timed regular beaconing indicate?',
+        choices: [
+          { text: 'A scheduled backup task running every 5 minutes.', correct: false },
+          { text: 'Automated malware C2 beaconing — human behavior has timing variance; only software produces zero-variance intervals.', correct: true },
+          { text: 'A monitoring agent checking server health.', correct: false },
+          { text: 'Normal keep-alive connections from a web application.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Zero variance in timing is the key indicator — humans and even most legitimate software introduce some random variation. Only malware with a hard-coded sleep(300000) interval produces perfectly regular connections. The small, consistent payload size (1.8–2.2 KB) is consistent with heartbeat/status check traffic. Legitimate monitoring tools would be identified in your asset inventory. This pattern warrants immediate host isolation and investigation.',
+          incorrect: 'Zero timing variance is the hallmark of automated malware beaconing. Human-initiated or even most legitimate automated tasks have some timing jitter. A perfectly regular 300-second interval with consistent small payloads and a newly registered destination is a strong C2 indicator. Isolate the host and investigate.',
+        },
+        points: 25,
+        objectives: ['Identify C2 beaconing via timing analysis', 'Understand why zero variance indicates automation', 'Know jitter as an evasion technique'],
+        hint: 'No human generates exactly 300-second intervals with zero variance for 24 hours. What kind of code does?',
+      },
+    ],
+  },
+  {
+    id: 'net-07',
+    category: 'network',
+    title: 'Rogue DHCP Server',
+    desc: 'Clients on a subnet receive incorrect IP configuration from an unauthorized source.',
+    tags: ['rogue-DHCP', 'DHCP-snooping', 'misconfiguration'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'Help desk tickets — Floor 3, last 2 hours',
+        terminal: [
+          { type: 'output', text: '[08:45] User report: "Can\'t access internet — got IP 172.20.0.45"' },
+          { type: 'output', text: '[08:47] User report: "Same issue — IP shows 172.20.0.67, gateway 172.20.0.1"' },
+          { type: 'output', text: '[08:52] User report: "172.20.0.88 — DNS not resolving anything"' },
+          { type: 'warn',   text: '[09:01] NETWORK: Floor 3 VLAN expected range: 10.0.3.0/24, gateway 10.0.3.1' },
+          { type: 'alert',  text: '[09:01] Rogue DHCP server detected: MAC 00:1A:2B:3C:4D:5E on switch port Gi1/0/14' },
+          { type: 'output', text: '[09:01] Rogue server handing out: 172.20.0.0/24, gateway 172.20.0.1 (attacker-controlled)' },
+        ],
+        question: 'Beyond loss of internet connectivity, what is the security risk of a rogue DHCP server?',
+        choices: [
+          { text: 'Users will receive conflicting IP addresses causing collisions.', correct: false },
+          { text: 'The attacker-controlled gateway can intercept all traffic — a network-layer MitM without any ARP manipulation.', correct: true },
+          { text: 'The legitimate DHCP server will be overwhelmed by the conflict.', correct: false },
+          { text: 'DNS cache will be poisoned for the entire network.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. By pointing the default gateway to an attacker-controlled device (172.20.0.1), the rogue DHCP server routes all victim traffic through the attacker without needing ARP spoofing. The attacker\'s box acts as the router — all traffic flows through it. Additionally, the rogue DNS server field can direct DNS queries to an attacker-controlled resolver, enabling DNS spoofing and credential harvesting at scale. This is DHCP starvation + rogue server — a complete network takeover technique.',
+          incorrect: 'The rogue DHCP server assigns an attacker-controlled gateway, making every client route all traffic through the attacker\'s machine. It also controls DNS resolution. This is a full network-layer MitM without ARP manipulation — more reliable and harder to detect without DHCP snooping.',
+        },
+        points: 25,
+        objectives: ['Understand rogue DHCP attack impact', 'Know DHCP snooping as the preventive control', 'Recognize MitM via gateway manipulation'],
+        hint: 'When your gateway IP points to the attacker\'s machine, where does all your outbound traffic go first?',
+      },
+    ],
+  },
+  {
+    id: 'net-08',
+    category: 'network',
+    title: 'Cleartext Protocol Exposure',
+    desc: 'Sensitive data is being transmitted over unencrypted protocols.',
+    tags: ['FTP', 'Telnet', 'cleartext', 'protocol-security'],
+    steps: [
+      {
+        type: 'network',
+        label: 'Weekly protocol audit — internal and perimeter traffic',
+        networkRows: [
+          { class: 'row-ok',         src: '10.0.1.45',  dst: '10.0.5.20',  proto: 'SFTP',   port: '22',  bytes: '450 MB', note: 'Encrypted file transfer' },
+          { class: 'row-suspicious', src: '10.0.2.11',  dst: '203.0.113.5', proto: 'FTP',   port: '21',  bytes: '1.2 GB', note: 'Cleartext — credentials visible' },
+          { class: 'row-ok',         src: '10.0.1.88',  dst: '10.0.5.10',  proto: 'SSH',    port: '22',  bytes: '12 KB',  note: 'Encrypted admin access' },
+          { class: 'row-suspicious', src: '10.0.3.55',  dst: '192.168.1.1', proto: 'Telnet',port: '23',  bytes: '8 KB',   note: 'Cleartext — router management' },
+          { class: 'row-ok',         src: '10.0.1.22',  dst: '104.18.2.1',  proto: 'HTTPS', port: '443', bytes: '22 MB',  note: 'Encrypted web traffic' },
+          { class: 'row-suspicious', src: '10.0.4.9',   dst: '10.0.5.30',  proto: 'HTTP',   port: '80',  bytes: '340 KB', note: 'Cleartext internal web app' },
+        ],
+        question: 'Which cleartext protocol represents the HIGHEST risk in this list?',
+        choices: [
+          { text: 'FTP to an external server transferring 1.2 GB of data.', correct: false },
+          { text: 'Telnet to the router — cleartext administrative access exposes router credentials and configuration.', correct: true },
+          { text: 'HTTP on an internal web application.', correct: false },
+          { text: 'All three are equally risky.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Telnet to the router is the most critical: anyone on the network path can capture the router\'s admin credentials and full session in plaintext, giving them complete network control. Router compromise means the attacker can: redirect traffic, disable security controls, access all connected network segments, and persist indefinitely. FTP is serious (1.2 GB of potentially sensitive data), but router credential exposure has unlimited blast radius. Replace Telnet with SSH immediately.',
+          incorrect: 'Telnet to the router is highest risk because router admin credentials in cleartext mean full network compromise. An attacker who captures those credentials owns the entire network. FTP data exposure is serious but limited in scope. Replace Telnet with SSH (port 22) for all device management.',
+        },
+        points: 20,
+        objectives: ['Identify cleartext protocols in network traffic', 'Prioritize risk by impact of credential exposure', 'Know encrypted replacements for legacy protocols'],
+        hint: 'Which credential, if stolen from cleartext, gives the attacker the most power over the entire network?',
+      },
+    ],
+  },
 ];
 
 // ---- DATA CLASSIFICATION SCENARIOS -------------------------------------------
@@ -1086,6 +2074,188 @@ const DATACLASS_SCENARIOS = [
         },
         points: 20,
         hint: 'Modifying a single record in a live database is easy. Modifying the same record across dozens of point-in-time backup files is not. What alternative approaches exist?',
+      },
+    ],
+  },
+  {
+    id: 'dc-04',
+    category: 'dataclass',
+    title: 'HIPAA and Protected Health Information',
+    desc: 'A healthcare app handles patient data subject to HIPAA requirements.',
+    tags: ['HIPAA', 'PHI', 'healthcare', 'compliance'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Developer question during design review',
+        stageContent: 'A developer is building a patient appointment scheduling app that stores:<br><br>' +
+          '• Patient full name and date of birth<br>' +
+          '• Diagnosis codes (ICD-10)<br>' +
+          '• Insurance member ID<br>' +
+          '• Appointment date and provider name<br>' +
+          '• Email address and phone number<br><br>' +
+          'They ask: "Which fields make this a HIPAA-regulated system?"',
+        question: 'Which combination makes this data Protected Health Information (PHI) under HIPAA?',
+        choices: [
+          { text: 'Only the diagnosis codes — health conditions are the only regulated data.', correct: false },
+          { text: 'Any individually identifiable health information — name + diagnosis codes + appointment data together constitute PHI.', correct: true },
+          { text: 'Only insurance IDs — financial health data triggers HIPAA.', correct: false },
+          { text: 'Email and phone alone, since they are contact information.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. HIPAA PHI is defined as individually identifiable health information — any data that relates to a person\'s health condition AND can be linked to a specific individual. Name + diagnosis codes = PHI. Name + appointment date + provider = PHI. Even the combination of zip code + date of birth + gender can be PHI if it could identify the individual. Contact information alone is not PHI, but becomes PHI when combined with health data. This entire app is HIPAA-regulated.',
+          incorrect: 'PHI is any individually identifiable health information — health data that can be linked to a specific person. The combination of name + diagnosis + appointment data meets this definition. Contact info alone isn\'t PHI, but contact info + health data is. This app handles PHI and requires HIPAA-compliant controls: access controls, audit logging, encryption, Business Associate Agreements with vendors.',
+        },
+        points: 15,
+        objectives: ['Define HIPAA PHI accurately', 'Understand that combination of fields creates PHI', 'Know which systems are HIPAA-regulated'],
+        hint: 'HIPAA PHI = health information + ability to identify the individual. Does this data allow you to identify who has which health condition?',
+      },
+      {
+        type: 'analysis',
+        label: 'HIPAA technical safeguards',
+        stageContent: 'The app stores PHI in a PostgreSQL database. The security team reviews the configuration and finds: no encryption at rest, no audit logging of record access, and the app uses a shared database account with no per-user tracking.',
+        question: 'Which of these HIPAA Technical Safeguard requirements is most critically violated?',
+        choices: [
+          { text: 'Encryption at rest — required for all PHI databases.', correct: false },
+          { text: 'Audit controls — HIPAA requires audit logs of all access to PHI so you can detect unauthorized access.', correct: true },
+          { text: 'Automatic logoff — sessions must time out after inactivity.', correct: false },
+          { text: 'All three are equally required.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. HIPAA\'s Audit Controls standard (§164.312(b)) is required (not addressable): covered entities must implement hardware, software, and/or procedural mechanisms to record and examine access to PHI. Without audit logs, you cannot detect a breach, prove compliance, or respond to HHS investigations. Note: encryption at rest is "addressable" (must implement or document why not), while audit controls are "required". The shared database account also violates the Unique User Identification standard.',
+          incorrect: 'Audit controls are a REQUIRED HIPAA technical safeguard — you must log all access to PHI. Encryption at rest is "addressable" (strong recommendation, but you can document an alternative). Without audit logs, you cannot detect unauthorized access or prove compliance to HHS. The shared account also violates unique user identification requirements.',
+        },
+        points: 20,
+        hint: 'HIPAA distinguishes between "required" and "addressable" safeguards. Which of these violations is a "required" standard with no flexibility?',
+      },
+    ],
+  },
+  {
+    id: 'dc-05',
+    category: 'dataclass',
+    title: 'Intellectual Property Disclosure',
+    desc: 'An engineer pushes proprietary source code to a public repository.',
+    tags: ['IP', 'source-code', 'GitHub', 'trade-secret'],
+    steps: [
+      {
+        type: 'terminal',
+        label: 'DLP alert — GitHub integration monitoring',
+        terminal: [
+          { type: 'alert',  text: '[16:34:02] DLP ALERT: Source code pushed to public GitHub repository' },
+          { type: 'output', text: '[16:34:02] User: j.park@company.com' },
+          { type: 'output', text: '[16:34:02] Repository: github.com/jpark-dev/project-apollo-v2 (PUBLIC)' },
+          { type: 'output', text: '[16:34:02] Files: 847 files, including /src/core/proprietary-algo.py' },
+          { type: 'warn',   text: '[16:34:03] Detected: AWS_SECRET_KEY, DB_PASSWORD in .env file (committed)' },
+          { type: 'alert',  text: '[16:34:05] Repository indexed by GitHub search — publicly discoverable' },
+          { type: 'output', text: '[16:34:06] Employee note: "just needed to work from home this weekend"' },
+        ],
+        question: 'What are the two distinct security incidents in this alert?',
+        choices: [
+          { text: 'Unauthorized repository creation and violation of the remote work policy.', correct: false },
+          { text: 'Intellectual property disclosure (proprietary source code) AND credential exposure (AWS key + DB password in a public repo).', correct: true },
+          { text: 'Data exfiltration and a GDPR violation.', correct: false },
+          { text: 'Policy violation only — no data was exposed because only the employee can see their GitHub.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Two separate incidents: (1) IP/trade secret disclosure — proprietary source code is now publicly available and Google-indexed. Competitors can access it immediately. (2) Credential exposure — the AWS secret key and DB password are in the commit history. Even if the repo is made private, the credentials must be rotated immediately because automated scanners (GitGuardian, TruffleHog bots) harvest credentials from public repos within seconds of push. Both require immediate action in parallel.',
+          incorrect: 'Two incidents: source code IP exposure AND credential exposure via committed secrets. Critically: the credentials must be rotated NOW — bot scanners harvest API keys from GitHub within seconds. Making the repo private doesn\'t undo the credential exposure. Treat both the AWS key and database password as fully compromised.',
+        },
+        points: 20,
+        objectives: ['Identify dual-incident nature of code+secret exposure', 'Know that secrets in git history persist after deletion', 'Understand bot scanning speed for credential harvesting'],
+        hint: 'Look at both types of data in the push. What are the implications of each type being public for even 30 seconds?',
+      },
+    ],
+  },
+  {
+    id: 'dc-06',
+    category: 'dataclass',
+    title: 'Third-Party Data Sharing',
+    desc: 'A vendor contract and data processing agreement must be reviewed before sharing customer data.',
+    tags: ['DPA', 'GDPR', 'third-party', 'vendor-risk'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Marketing team request',
+        stageContent: 'The marketing team wants to share a file containing 85,000 customer email addresses, names, and purchase history with a new advertising partner for a targeted campaign.<br><br>' +
+          'Current status:<br>' +
+          '• No Data Processing Agreement (DPA) with the partner<br>' +
+          '• Privacy policy says data "may be shared with trusted partners"<br>' +
+          '• Customers opted in to marketing emails from your company<br>' +
+          '• The partner will use data independently for their own analytics',
+        question: 'Under GDPR, can you legally share this data with the advertising partner as described?',
+        choices: [
+          { text: 'Yes — the privacy policy mentions sharing with partners, which is sufficient consent.', correct: false },
+          { text: 'No — "trusted partners" in a privacy policy is not specific enough consent, no DPA exists, and the partner using data for their own analytics makes them a data controller, not a processor.', correct: true },
+          { text: 'Yes — customers opted in to marketing, which covers all marketing-related uses.', correct: false },
+          { text: 'Yes, as long as a DPA is signed within 30 days of sharing.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Multiple GDPR violations would occur: (1) Consent was given for marketing from YOUR company, not from the partner — purpose limitation violation, (2) "Trusted partners" is not specific enough to constitute valid consent or legitimate interest for sharing with a named third party, (3) If the partner uses the data for their own purposes, they are a data controller, not a processor — requiring a different legal basis (joint controller agreement or the customer\'s specific consent for the partner\'s use). A DPA must be in place BEFORE sharing, not after.',
+          incorrect: 'This share would violate GDPR\'s purpose limitation (consent was for your marketing, not the partner\'s), specificity requirements (vague "trusted partners" language is insufficient), and requires a DPA before sharing. The partner using data for their own analytics makes them a data controller — requiring explicit consent for their specific use.',
+        },
+        points: 20,
+        objectives: ['Understand GDPR purpose limitation principle', 'Know DPA requirements before third-party data sharing', 'Distinguish data processor vs data controller'],
+        hint: 'Customers opted in to YOUR marketing. Did they opt in to the advertising partner\'s independent use of their data?',
+      },
+    ],
+  },
+  {
+    id: 'dc-07',
+    category: 'dataclass',
+    title: 'Data Retention Policy',
+    desc: 'An HR department requests deletion of all records for former employees.',
+    tags: ['data-retention', 'legal-hold', 'minimization'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'HR ticket to IT',
+        stageContent: 'HR submits a request: <em>"Please permanently delete all records for the 47 employees who left the company more than 2 years ago. This includes payroll records, performance reviews, and email archives."</em><br><br>' +
+          'The company operates in the United States and the EU.',
+        question: 'What should IT do before deleting any of these records?',
+        choices: [
+          { text: 'Delete immediately — the employees are gone and retention is a privacy risk.', correct: false },
+          { text: 'Review applicable legal retention requirements and check for any active litigation holds before deleting anything.', correct: true },
+          { text: 'Delete performance reviews only — payroll records are always exempt.', correct: false },
+          { text: 'Ask each former employee for permission to delete their records.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Multiple legal retention requirements may apply: US federal law requires payroll/tax records for 3–7 years (IRS, FLSA). ERISA requires pension-related records for 6+ years. EU employment records have national-law retention requirements (often 3–10 years depending on type). Active litigation holds: if any former employee has filed or threatened legal claims, their records must be preserved (destruction could be considered spoliation of evidence). IT must consult Legal/HR/Compliance before deleting any category of records.',
+          incorrect: 'Legal retention requirements vary by record type and jurisdiction: payroll records (3-7 years US), benefits records (6+ years), and any records under active litigation hold must be preserved. Deleting records subject to a legal hold is evidence spoliation — a serious legal liability. Always involve Legal before any bulk deletion of employment records.',
+        },
+        points: 15,
+        objectives: ['Know legal retention requirements exist for employment records', 'Understand litigation hold obligations', 'Apply data minimization within legal constraints'],
+        hint: 'What legal obligations might require you to keep payroll and HR records for former employees? What happens if someone sues after you delete the records?',
+      },
+    ],
+  },
+  {
+    id: 'dc-08',
+    category: 'dataclass',
+    title: 'Encryption at Rest Requirements',
+    desc: 'A mobile app stores sensitive health data without encryption on the device.',
+    tags: ['encryption', 'mobile', 'at-rest', 'secure-storage'],
+    steps: [
+      {
+        type: 'analysis',
+        label: 'Mobile app security review finding',
+        stageContent: 'A security review of a mobile health app finds:<br><br>' +
+          '• User health data stored in SQLite database: <code>/data/data/com.app/databases/health.db</code> — no encryption<br>' +
+          '• Authentication tokens stored in SharedPreferences (Android) — world-readable<br>' +
+          '• Encryption flag set to false in the database configuration<br><br>' +
+          'The developer argues: "The device has a PIN/biometric lock, so the data is already protected."',
+        question: 'Why is the developer\'s argument insufficient?',
+        choices: [
+          { text: 'It is sufficient — device-level encryption protects all apps on the device.', correct: false },
+          { text: 'Device lock screen protects against casual access but not against: ADB data extraction on rooted devices, backup extraction, physical memory attacks, or malicious apps with file read permissions.', correct: true },
+          { text: 'The argument is partially correct — only authentication tokens need additional protection.', correct: false },
+          { text: 'The developer is right for Android but wrong for iOS.', correct: false },
+        ],
+        feedback: {
+          correct: 'Correct. Device lock screen is not the same as application-level data encryption. Multiple attack vectors bypass it: (1) Android Debug Bridge (ADB) can extract app data from rooted/unlocked bootloader devices, (2) Android backup APIs may expose unencrypted databases to backup tools, (3) Other apps with READ_EXTERNAL_STORAGE or root access can read app files, (4) Physical memory attacks on older devices. The correct approach: use Android Keystore / iOS Keychain to encrypt the SQLite database with a key tied to device authentication, and store tokens in secure storage (Android Keystore-backed, iOS Secure Enclave).',
+          incorrect: 'Device lock screen ≠ application data encryption. ADB extraction, backup APIs, root access, and malicious apps can all access unencrypted app databases. Application-level encryption using platform-provided secure storage (Android Keystore, iOS Secure Enclave) is required for sensitive data.',
+        },
+        points: 20,
+        objectives: ['Understand device lock vs application encryption', 'Know mobile data extraction attack vectors', 'Apply platform-provided secure storage APIs'],
+        hint: 'Name two ways someone could access the SQLite file on an Android device without ever entering the PIN.',
       },
     ],
   },
