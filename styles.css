@@ -303,7 +303,7 @@ body {
 
 /* Email sim */
 .email-sim {
-  background: #1a1a2e;
+  background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -318,7 +318,7 @@ body {
 }
 .email-header-label { color: var(--muted); min-width: 60px; }
 .email-header-val { color: var(--text); }
-.email-body { padding: 16px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+.email-body { padding: 16px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text); }
 .email-link { color: #4db8ff; text-decoration: underline; cursor: default; }
 .suspicious { color: var(--danger); }
 .highlight-warn { background: rgba(210,153,34,.2); border-radius: 3px; padding: 0 3px; }
